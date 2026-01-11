@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+/* Root color variables for dark premium theme */
+:root {
+  --background: #050b15;
+  --surface: rgba(25, 38, 66, 0.5);
+  --surface-hover: rgba(30, 50, 88, 0.65);
+  --accent-primary: #4676E1;
+  --accent-secondary: #9CC8FF;
+  --highlight: #B7E3F8;
+  --text-primary: #FAFBFF;
+  --text-secondary: #A9B8D4;
+  --border-color: rgba(255, 255, 255, 0.07);
+  --shadow-color: rgba(0, 0, 0, 0.45);
+}
+
+/* Base styling for the body element */
+body {
+  background: radial-gradient(circle at top left, #050b15 0%, #0a1120 80%);
+  color: var(--text-primary);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-size: 1rem;
+  line-height: 1.7;
+  letter-spacing: 0.25px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Heading styles */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text-primary);
+}
+h1 { font-size: 2.3rem; line-height: 1.3; }
+h2 { font-size: 1.85rem; }
+h3 { font-size: 1.45rem; }
+
+/* Link styles and hover effects */
+a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+a:hover {
+  color: var(--highlight);
+  text-shadow: 0 0 8px rgba(183, 227, 248, 0.4);
+}
+
+/* Card component with glass effect */
+.card {
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 28px var(--shadow-color);
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.25s ease;
+}
+.card:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Styling for form elements */
+input, textarea, select {
+  background: rgba(19, 42, 79, 0.85);
+  border: 1px solid rgba(138, 180, 248, 0.15);
+  color: var(--text-primary);
+  padding: 0.7rem 1rem;
+  border-radius: 0.6rem;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--highlight);
+  box-shadow: 0 0 0 3px rgba(183, 227, 248, 0.3);
+}
+
+/* Button styles and hover effects */
+button {
+  background: linear-gradient(135deg, #4676E1, #5C8EE8);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: 0.7rem;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 14px rgba(156, 200, 255, 0.25);
+}
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(156, 200, 255, 0.35);
+}
+
+/* Background blur for modal overlay */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--surface-hover);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Styling for active navigation links */
+.active-link {
+  color: var(--highlight);
+  font-weight: 600;
+  position: relative;
+}
+.active-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--highlight), var(--accent-secondary));
+  border-radius: 2px;
+}
+
+/* Global transition effects for smoother UI */
+* {
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Flex layout helper for responsive alignment */
+.flex-row-between {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .flex-row-between {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sm-align-center {
+    align-items: center;
+  }
+}
+
+/* Margin and spacing utilities */
+.mb-3 { margin-bottom: 1.5rem; }
+.mt-2 { margin-top: 0.75rem; }
+
+/* Glass styling for table containers */
+.table-glass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+/* Fade-in animation for page transitions */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Background helper for dark glass sections */
+.bg-dark-glass {
+  background-color: rgba(15, 15, 25, 0.6);
+}
+
+/* Container layout for page content */
+.page-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Title text styling */
+.title {
+  font-size: 1.75rem;
+  color: var(--text-primary);
+}
+
+/* Background highlight utility */
+.bg-highlight {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Modal backdrop layout and blur */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(0px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal content container with scroll support */
+.modal-content {
+  background: rgba(19, 42, 79, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 10px 28px var(--shadow-color);
+  max-width: 500px;
+  width: 100%;
+
+  /* Prevent modal from exceeding viewport */
+  max-height: 90vh;
+
+  /* Enable vertical scroll when needed */
+  overflow-y: auto;
+
+  /* Scrollbar styling for Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}

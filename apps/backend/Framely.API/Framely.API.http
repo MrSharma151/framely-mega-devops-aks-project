@@ -1,0 +1,34 @@
+@Framely.API_HostAddress = https://localhost:7178
+
+### Health Check
+
+GET {{Framely.API_HostAddress}}/health
+Accept: application/json
+
+###
+
+### List Blobs
+
+GET {{Framely.API_HostAddress}}/api/blob/list
+Accept: application/json
+
+###
+
+### Upload Blob
+
+POST {{Framely.API_HostAddress}}/api/blob/upload
+Content-Type: application/json
+
+{
+  "fileName": "sample.png",
+  "container": "images"
+}
+
+###
+
+### Delete Blob
+
+DELETE {{Framely.API_HostAddress}}/api/blob/delete?fileName=sample.png&container=images
+Accept: application/json
+
+###

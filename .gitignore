@@ -1,0 +1,101 @@
+############################################
+# 🔒 SECRETS & ENV FILES (VERY IMPORTANT)
+############################################
+.env
+.env.*
+*.env
+
+# ASP.NET Core secrets
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/secrets.json
+local.settings.json
+
+# Kubernetes secrets (never commit)
+**/*secret*.yaml
+**/*secrets*.yaml
+
+############################################
+# 🐳 DOCKER
+############################################
+**/node_modules/
+**/dist/
+**/.next/
+**/coverage/
+
+docker-compose.override.yml
+
+############################################
+# ☁️ TERRAFORM
+############################################
+**/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/terraform.tfvars.json
+crash.log
+
+############################################
+# 🧩 ANSIBLE
+############################################
+**/*.retry
+**/.ansible/
+
+############################################
+# 🧪 TEST / BUILD OUTPUTS
+############################################
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+app.publish/
+TestResult*/
+*.trx
+
+############################################
+# 🖥️ IDE / EDITORS
+############################################
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln.iml
+
+############################################
+# 📦 NUGET
+############################################
+packages/
+**/packages/*
+*.nupkg
+*.snupkg
+*.nuspec
+*.nuget.props
+*.nuget.targets
+
+############################################
+# 📄 LOGS & TEMP FILES
+############################################
+*.log
+*.tlog
+*.tmp
+*.bak
+*.old
+
+############################################
+# 💻 OS FILES
+############################################
+.DS_Store
+Thumbs.db
+~$*
+
+############################################
+# 🔐 JENKINS (local artifacts if any)
+############################################
+**/jenkins/workspace/
+**/jenkins/.env
