@@ -1,0 +1,28 @@
+# Node / npm
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+# Tests & test configs (CI me run hote hain, image me nahi)
+tests
+**/*.test.ts
+**/*.test.tsx
+jest.config.js
+babel.config.js
+
+# Local / editor stuff
+.vscode
+.idea
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Next.js build cache (builder stage me regenerate hoga)
+.next/cache
+
+# Env files (frontend me env use nahi kar rahe, still safe)
+.env
+.env.*
