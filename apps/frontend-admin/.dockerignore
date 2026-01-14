@@ -1,0 +1,24 @@
+# Node modules (installed inside container)
+node_modules
+
+# Tests (CI only, never ship to prod image)
+test
+**/*.test.ts
+**/*.test.tsx
+jest.config.*
+babel.config.js
+
+# Local & VCS
+.git
+.gitignore
+README.md
+
+# Env files
+.env
+.env.*
+
+# Next.js build cache
+.next/cache
+
+# OS / editor junk
+.DS_Store

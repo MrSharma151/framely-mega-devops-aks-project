@@ -112,14 +112,24 @@ builder.Services.AddScoped<IBlobService, BlobService>();
 // Step 7: Register AutoMapper
 builder.Services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfile>());
 
-// Step 8: Add CORS for frontend
-var frontendOrigin = builder.Configuration["FrontendOrigin"] ?? "http://localhost:3000";
+// Step 8: Add CORS for frontend (supports multiple origins)
+var frontendOrigins = builder.Configuration
+    .GetSection("FrontendOrigins")
+    .Get<string[]>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(frontendOrigin)
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    {
+        policy
+            .WithOrigins(frontendOrigins ?? new[]
+            {
+                "http://localhost:3000",
+                "http://localhost:3001"
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
 
 var app = builder.Build();
@@ -135,7 +145,7 @@ if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
 }
 
 // Step 10: Middleware pipeline
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
@@ -193,49 +203,62 @@ await context.Response.WriteAsync(html);
 });
 
 
-// Step 11: Optional DB seeding via config flag
-if (builder.Configuration.GetValue<bool>("SeedAdmin"))
+// 🔥 CRITICAL: Ensure DB + Tables + Roles exist (Docker / Azure safe)
+using (var scope = app.Services.CreateScope())
 {
-    await SeedRolesAndAdminAsync(app.Services);
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        await dbContext.Database.MigrateAsync();
+
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        var userManager = services.GetRequiredService<UserManager<AppUser>>();
+
+        // 1️⃣ Ensure roles
+        string[] roles = { "USER", "ADMIN" };
+        foreach (var role in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
+        }
+
+        // 2️⃣ Seed DEFAULT ADMIN (ONLY ONCE)
+        var adminEmail = "admin@framely.com";
+        var adminPassword = "Admin@123"; // 👉 first-time only
+
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+        if (adminUser == null)
+        {
+            adminUser = new AppUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                FullName = "System Admin",
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(adminUser, adminPassword);
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(adminUser, "ADMIN");
+
+                Console.WriteLine("✅ DEFAULT ADMIN CREATED");
+                Console.WriteLine($"📧 {adminEmail}");
+                Console.WriteLine($"🔑 {adminPassword}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("❌ DATABASE / SEED FAILED");
+        Console.WriteLine(ex);
+        throw;
+    }
 }
 
+// Step 11: Run the application
 app.Run();
-
-/// <summary>
-/// Seeds default roles and admin user if not present.
-/// </summary>
-static async Task SeedRolesAndAdminAsync(IServiceProvider services)
-{
-    using var scope = services.CreateScope();
-
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-
-    string[] roles = { "USER", "ADMIN" };
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-        {
-            await roleManager.CreateAsync(new IdentityRole(role));
-        }
-    }
-
-    var adminEmail = "admin@framely.com";
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-    if (adminUser == null)
-    {
-        adminUser = new AppUser
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            EmailConfirmed = true
-        };
-
-        var result = await userManager.CreateAsync(adminUser, "Admin@123");
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(adminUser, "ADMIN");
-        }
-    }
-}

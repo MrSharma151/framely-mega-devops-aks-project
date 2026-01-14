@@ -1,11 +1,16 @@
 // src/services/apiClient.ts
 import axios from "axios";
 
+// 🔹 API base URL from environment (local + prod safe)
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  "http://localhost:8081/api/v1"; // fallback for local dev
+
 // Centralized Axios instance for consistent API configuration
 // - Defines base URL and default headers
 // - Avoids repetitive setup across requests
 const apiClient = axios.create({
-  baseURL: "https://framely-backend-cvccf3aah7d4ceaq.centralindia-01.azurewebsites.net/api/v1",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

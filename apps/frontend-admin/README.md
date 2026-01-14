@@ -1,193 +1,221 @@
-# 👓 Framely Admin Dashboard
-
-Framely Admin is a **premium admin dashboard** for managing the Framely eyewear store.
-Admins can **manage categories, products, and orders**, upload product images, and monitor store performance.
-This is the **Admin Frontend (MVP level)** built with **Next.js (App Router)** and deployed on **Azure Static Web Apps**.
-
-🔗 **Live Demo:** [Framely Admin Dashboard](https://gentle-glacier-044690e00.1.azurestaticapps.net/)
-⚠️ **Note:** This dashboard is accessible **only with admin credentials**.
 
 ---
 
-## 📌 Status
+# 👓 Framely Admin Frontend (Admin Dashboard)
 
-* ✅ **MVP Features Completed**
-* 🚀 **Deployed & Live on Azure Static Web Apps**
-* 🔧 **Actively evolving (analytics, reports & role-based access under development)**
+**Framely Admin Frontend** is the **Admin Dashboard application** for managing the Framely eyewear platform.
+This application is designed to be **containerized, testable, and deployable via CI/CD** as part of the **Framely Mega DevOps Project**.
+
+It allows **ADMIN users** to manage:
+
+* Categories
+* Products
+* Orders
+* Product images (via Blob Storage – backend dependent)
+
+This frontend is built with **Next.js (App Router)** and is intended to run:
+
+* Locally via **Docker / Docker Compose**
+* In production via **Azure Static Web Apps**
+* Inside **AKS** as part of an end-to-end GitOps workflow
 
 ---
 
-## 🛠️ Tech Stack
+## 📌 Project Status
 
-* **Next.js 14+ (App Router)** – Modern React framework
-* **TypeScript** – Strict type safety
-* **TailwindCSS** – Utility-first styling
-* **Lucide-react** – Icon library
-* **Axios** – API client (`apiClient.ts`)
-* **react-hot-toast** – User-friendly notifications
-* **Global Dark Premium Theme** – CSS variables & glassmorphism
-* **Protected Routes** – Secure authentication & access control
+* ✅ **Core Admin Features Implemented**
+* ✅ **Dockerized**
+* ✅ **Unit & Component Tests Added**
+* ✅ **Integrated with Framely Backend API**
+* 🚀 **Production-ready for AKS / Azure Static Web Apps**
 
 ---
 
-## ✅ Features (MVP Level)
+## 🧱 Tech Stack
 
-### 📊 Dashboard
+* **Next.js 14 (App Router)**
+* **TypeScript**
+* **Tailwind CSS**
+* **Axios** – centralized API client
+* **JWT-based Auth (Admin only)**
+* **Jest** – unit & component testing
+* **Docker** – containerized build & runtime
 
-* Overview of orders, revenue & quick stats
-* Reusable **Card** & **Table** components
+---
 
-### 📂 Categories Management
+## 📂 Directory Structure (Current)
 
-* Add, edit, search, delete categories
-* Glassmorphic tables & modals
-* Fully responsive
+```bash
+apps/frontend-admin/
+├── Dockerfile            # Production-ready Dockerfile
+├── README.md             # Project documentation
+├── VERSION               # App versioning
+├── package.json
+├── package-lock.json
+├── jest.config.js        # Jest configuration
+├── babel.config.js
+├── next.config.ts
+├── tailwind.config.js
+├── tsconfig.json
+├── src/                  # Application source code
+└── test/                 # ✅ Test cases (Jest)
+```
 
-### 🛍️ Products Management
+✅ **Important Notes**
 
-* CRUD operations on products
-* Filter by category & brand
-* **Image upload & preview (via Blob APIs)**
+* All **test cases live inside `/test`**
+* **Dockerfile is present at root of this directory**
+* No external setup needed to containerize this app
+
+---
+
+## ✅ Core Features
+
+### 📊 Admin Dashboard
+
+* High-level overview of system data
+* Reusable cards & tables
+* Responsive layout
+
+### 📂 Category Management
+
+* Create / update / delete categories
+* Search & filter support
+* Clean UI with modals
+
+### 🛍️ Product Management
+
+* Full CRUD on products
+* Category & brand filtering
 * Pagination & search
+* Image upload handled by backend Blob APIs
 
-### 📦 Orders Management
+### 📦 Order Management
 
-* Paginated list of all orders
-* Update order status → `Pending`, `Processing`, `Completed`, `Cancelled`
-* View order details in modal
-* Delete orders (if required)
+* View all orders
+* Update order status
+* View order details
+* Delete orders (admin-only)
 
-### ♻️ Reusable Components
+### 🔐 Authentication & Authorization
 
-* Buttons, Cards, Tables, Modals
-* Search bars & filters
-* Smooth transitions & hover effects
+* Admin-only access
+* JWT-based authentication
+* Protected routes
 
-### 🔔 Notifications
+---
 
-* Success & error messages with **react-hot-toast**
+## 🧪 Testing
+
+This project includes **frontend test cases** using **Jest**.
+
+```bash
+npm install
+npm test
+```
+
+Tests are located in:
+
+```bash
+apps/frontend-admin/test/
+```
+
+These tests are designed to:
+
+* Validate components
+* Catch regressions early
+* Be CI-friendly
+
+---
+
+## 🐳 Docker Support
+
+This frontend is **fully Dockerized**.
+
+### Build Image
+
+```bash
+docker build -t framely-admin .
+```
+
+### Run Container
+
+```bash
+docker run -p 3001:3000 framely-admin
+```
+
+### With Docker Compose
+
+This service is designed to run via the **root `docker-compose.yml`** along with:
+
+* Backend API
+* Database
+* Other frontends
 
 ---
 
 ## 🌐 Backend API Integration
 
-* **Base API URL** configured in `apiClient.ts`
+The Admin frontend communicates with the **Framely Backend API**.
 
-**Category APIs**
+The API base URL is injected via environment variable:
 
-* `GET /Categories` → All categories
-* `POST /Categories` → Add category
-* `PUT /Categories/{id}` → Update category
-* `DELETE /Categories/{id}` → Delete category
-
-**Product APIs**
-
-* `GET /Products` → All products
-* `GET /Products/{id}` → Product details
-* `POST /Products` → Add product
-* `PUT /Products/{id}` → Update product
-* `DELETE /Products/{id}` → Delete product
-* `GET /Products/category?name=` → Filter by category
-* `GET /Products/brand?name=` → Filter by brand
-* `GET /Products/search?term=` → Search products
-
-**Order APIs**
-
-* `GET /Orders` → Paginated orders
-* `GET /Orders/{id}` → Order by ID
-* `PUT /Orders/{id}/status` → Update status
-* `DELETE /Orders/{id}` → Delete order
-
-**Blob APIs (Image Uploads)**
-
-* `POST /Blob/upload` → Uploads an image (returns public URL)
-* `DELETE /Blob/{fileName}` → Deletes an uploaded image
-
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8081/api/v1
 ```
 
-**Pagination Response Example:**
-
-```json
-{
-  "totalItems": 120,
-  "totalPages": 12,
-  "currentPage": 1,
-  "pageSize": 10,
-  "data": [
-    {
-      "id": 1,
-      "userId": 101,
-      "totalPrice": 4999,
-      "status": "Pending",
-      "items": [
-        { "productId": 1, "name": "Premium Aviator", "quantity": 2, "price": 1999 }
-      ]
-    }
-  ]
-}
-```
+Configured inside Docker Compose and CI pipelines — **no hardcoded URLs**.
 
 ---
 
-## 🚀 Deployment (Azure Static Web App)
+## 🚀 Deployment Strategy
 
-This project is deployed on **Azure Static Web Apps** with **CI/CD via GitHub Actions**.
+### Local Development
 
-### 📦 Hosting & Infra
+* Docker / Docker Compose
 
-* Azure SWA resource (`framely-admin`)
-* GitHub-connected for automated deployments
-* Deployment token stored in GitHub Secrets (`AZURE_STATIC_WEB_APPS_API_TOKEN_ADMIN`)
-* Tagged resources for cost, ownership & environment clarity
+### CI/CD
 
-### 🔐 Security
+* GitHub Actions
+* Image build & push
+* Environment-based configuration
 
-* GitHub Secrets used:
+### Production
 
-  * `AZURE_STATIC_WEB_APPS_API_TOKEN_ADMIN`
-* No hardcoded secrets in repo
-
-### ⚙️ CI/CD Workflow
-
-* Workflow File: `.github/workflows/framely-admin-deploy.yml`
-* Modular: Separate workflow per deployable (`framely-customer`, `framely-admin`)
-* Trigger: Push to `azure-deployment` branch
-* Steps: Checkout → Install deps → Build Next.js → Deploy
-
-### 🧼 Config Hygiene
-
-* `next.config.ts` uses inferred typing
-* Enabled:
-
-  * `reactStrictMode`
-  * `trailingSlash`
-  * `styledComponents` compiler toggle
-* SSR retained for LCP & dynamic rendering
+* Azure Static Web Apps (current)
+* AKS (planned / scalable path)
 
 ---
 
-## 📂 Deployment-Relevant Structure
+## 🔐 Security & Config
 
-```bash
-Framely/
-├── .github/
-│   └── workflows/
-│       └── framely-admin-deploy.yml
-├── frontend/
-│   └── framely-admin/
-│       ├── public/
-│       ├── src/
-│       ├── next.config.ts
-│       └── README.md  
-```
+* No secrets committed in repo
+* Environment variables used for:
+
+  * API URLs
+  * Auth tokens
+* JWT handled securely on client side
 
 ---
 
 ## 📝 Notes
 
-* This project is **MVP ready** and already **deployed on Azure**
-* Accessible only with **admin credentials** (not for general users)
-* Next milestones: **analytics dashboards, reporting, role-based access management**
-* Contributions & feedback are welcome 🚀
+* This Admin frontend is **part of a larger DevOps Mega Project**
+* Designed with **AKS, GitOps (ArgoCD), and CI/CD pipelines** in mind
+* Fully compatible with:
 
+  * Docker
+  * Kubernetes
+  * Azure Cloud
+
+---
+
+## 🎯 Next Planned Enhancements
+
+* Advanced analytics dashboard
+* Role-based access control (RBAC)
+* Audit logs
+* Performance optimizations
+
+---
 

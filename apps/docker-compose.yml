@@ -1,0 +1,88 @@
+services:
+  # =========================
+  # SQL Server Database
+  # =========================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: framely-sqlserver
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "StrongPassword@123"
+      MSSQL_PID: "Developer"
+    volumes:
+      - sql_data:/var/opt/mssql
+    ports:
+      - "1433:1433"
+    networks:
+      - framely-network
+
+  # =========================
+  # Backend API
+  # =========================
+  backend:
+    build:
+      context: ./backend
+    image: framely-api:latest
+    container_name: framely-backend
+    restart: unless-stopped
+    depends_on:
+      - sqlserver
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver,1433;
+        Database=FramelyDb;
+        User Id=sa;
+        Password=StrongPassword@123;
+        TrustServerCertificate=True;
+
+      FrontendOrigins__0: http://localhost:3000
+      FrontendOrigins__1: http://localhost:3001
+    ports:
+      - "8081:8080"
+    networks:
+      - framely-network
+
+  # =========================
+  # Frontend - Customer
+  # =========================
+  frontend-customer:
+    build:
+      context: ./frontend-customer
+    image: framely-frontend-customer:latest
+    container_name: framely-frontend-customer
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8081/api/v1
+    ports:
+      - "3000:3000"
+    networks:
+      - framely-network
+
+  # =========================
+  # Frontend - Admin
+  # =========================
+  frontend-admin:
+    build:
+      context: ./frontend-admin
+    image: framely-admin:latest
+    container_name: framely-admin
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8081/api/v1
+    ports:
+      - "3001:3000"
+    networks:
+      - framely-network
+
+volumes:
+  sql_data:
+
+networks:
+  framely-network:
+    driver: bridge

@@ -1,162 +1,233 @@
+
+---
+
 # 👓 Framely Customer Frontend
 
-Framely is an **online eyewear store** where users can browse products, filter by categories, search, place orders, and manage their account.
-This is the **Customer Frontend (MVP level)** built with **Next.js (App Router)** and deployed on **Azure Static Web Apps**.
+**Framely Customer Frontend** is the **customer-facing web application** for the Framely eyewear platform.
+This application allows end users to **browse products, search, filter, place orders, and manage their account**.
 
-🔗 **Live Demo:** [Framely Customer Frontend](https://orange-wave-06841fe00.1.azurestaticapps.net/)
+It is designed to be:
 
----
+* **Containerized**
+* **Tested**
+* **CI/CD friendly**
+* **AKS & Azure ready**
 
-## 📌 Status
-
-* ✅ **MVP Features Completed**
-* 🚀 **Deployed & Live on Azure Static Web Apps**
-* 🔧 **Actively evolving (user management & advanced features under development)**
-
----
-
-## 🛠️ Tech Stack
-
-* **Next.js 14+ (App Router)** – Modern React framework
-* **TypeScript** – Strict type safety
-* **TailwindCSS** – Utility-first styling
-* **Lucide-react** – Icon library
-* **Axios** – API client (`apiClient.ts`)
-* **react-hot-toast** – User notifications
-* **JWT Authentication** – Stored in `localStorage`
-* **Protected Routes** – Redirects unauthenticated users
+This frontend is part of the **Framely Mega DevOps Project**, where the entire system (frontend, backend, database) runs using **Docker, Docker Compose, CI/CD pipelines, and Kubernetes (AKS)**.
 
 ---
 
-## ✅ Features (MVP Level)
+## 📌 Project Status
 
-### 🔑 Authentication & Routing
+* ✅ **Core Customer Features Implemented**
+* ✅ **Dockerized**
+* ✅ **Unit & Component Tests Added**
+* ✅ **Integrated with Framely Backend API**
+* 🚀 **Production-ready for AKS / Azure Static Web Apps**
 
-* Auth-aware pages → Redirects to `/auth/login` if not logged in
-* `useAuth()` hook for hydration check
+---
 
-### 🛍️ Shop & Products
+## 🧱 Tech Stack
 
-* Backend Pagination → **10 products per page**
-* Category filter via backend query
+* **Next.js 14 (App Router)**
+* **TypeScript**
+* **Tailwind CSS**
+* **Axios** – centralized API client
+* **JWT Authentication** (stored in browser storage)
+* **Jest** – unit & component testing
+* **Docker** – containerized build & runtime
+
+---
+
+## 📂 Directory Structure (Current)
+
+```bash
+apps/frontend-customer/
+├── Dockerfile            # Production-ready Dockerfile
+├── README.md             # Project documentation
+├── VERSION               # App versioning
+├── package.json
+├── package-lock.json
+├── jest.config.js        # Jest configuration
+├── babel.config.js
+├── next.config.js
+├── postcss.config.mjs
+├── tsconfig.json
+├── public/               # Static assets
+├── src/                  # Application source code
+└── tests/                # ✅ Test cases (Jest)
+```
+
+✅ **Important Notes**
+
+* All **test cases live inside `/tests`**
+* **Dockerfile is present at the root of this directory**
+* This app is fully runnable via **Docker / Docker Compose**
+
+---
+
+## ✅ Core Features
+
+### 🔐 Authentication & Routing
+
+* User registration & login
+* JWT-based authentication
+* Protected routes (redirects unauthenticated users)
+* Centralized auth handling via hooks & interceptors
+
+### 🛍️ Product Browsing
+
+* Paginated product listing (backend-driven)
+* Category-based filtering
 * Client-side search
-* Sorting: `Price Low→High`, `Price High→Low`, or default
+* Sorting support (price / default)
 
 ### 📦 Product Details
 
-* Fetched from backend
-* Fallback image & category display
-
-### 📑 My Orders
-
-* Fetches logged-in user’s orders
-* Dates converted to **IST** from backend UTC
-* Status badges: `Pending`, `Processing`, `Completed`, `Cancelled`
-* Cancel button for pending orders
-* Displays ordered items & total price
+* Individual product pages
+* Backend-driven data
+* Fallback handling for missing images
 
 ### 🛒 Cart & Checkout
 
 * Client-side cart management
-* Basic checkout flow → places order
+* Basic checkout flow
+* Order placement via backend API
 
-### 🗂️ Category Filter
+### 📑 My Orders
 
-* Toggle between all products vs filtered category
+* View logged-in user’s orders
+* Order status tracking:
 
-### 🔔 Toast Notifications
+  * `Pending`
+  * `Processing`
+  * `Completed`
+  * `Cancelled`
+* Cancel pending orders
+* Displays order items & total price
 
-* Error handling (failed API calls)
-* Success (order cancelled, placed etc.)
+### 🔔 Notifications
+
+* Success & error notifications
+* User-friendly feedback for API actions
+
+---
+
+## 🧪 Testing
+
+This project includes **frontend test cases** using **Jest**.
+
+```bash
+npm install
+npm test
+```
+
+Tests are located in:
+
+```bash
+apps/frontend-customer/tests/
+```
+
+These tests help ensure:
+
+* UI stability
+* Correct API interaction
+* CI-safe builds
+
+---
+
+## 🐳 Docker Support
+
+The Customer frontend is **fully Dockerized**.
+
+### Build Image
+
+```bash
+docker build -t framely-frontend-customer .
+```
+
+### Run Container
+
+```bash
+docker run -p 3000:3000 framely-frontend-customer
+```
+
+### With Docker Compose
+
+This service is intended to run as part of the **root `docker-compose.yml`**, alongside:
+
+* Backend API
+* Database
+* Admin frontend
 
 ---
 
 ## 🌐 Backend API Integration
 
-* **Base API URL** configured in `apiClient.ts`
+This frontend communicates with the **Framely Backend API**.
 
-**Key Endpoints:**
+The API base URL is injected via environment variables:
 
-* `/Products?page=1&pageSize=10&sortBy=name&sortOrder=asc`
-* `/Products/{id}`
-* `/Products/category?name=Men`
-* `/Products/search?term=aviator`
-* `/Categories` – fetch categories
-* `/Orders/my` – user orders
-* `/Orders/{id}/cancel` – cancel order
-
-**Sample Pagination Response:**
-
-```json
-{
-  "totalItems": 43,
-  "totalPages": 5,
-  "currentPage": 1,
-  "pageSize": 10,
-  "data": [
-    { "id": 1, "name": "Premium Aviator", "price": 1999, "imageUrl": "/img.jpg" }
-  ]
-}
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8081/api/v1
 ```
+
+✔ No hardcoded URLs
+✔ Environment-driven configuration (Docker / CI / AKS compatible)
 
 ---
 
-## 🚀 Deployment (Azure Static Web App)
+## 🚀 Deployment Strategy
 
-This project is deployed on **Azure Static Web Apps** with **CI/CD via GitHub Actions**.
+### Local Development
 
-### 📦 Hosting & Infra
+* Docker
+* Docker Compose
 
-* Azure SWA resource (`framely`)
-* GitHub-connected for automated deployments
-* Deployment token stored in GitHub Secrets (`AZURE_STATIC_WEB_APPS_API_TOKEN_CUSTOMER`)
-* Tagged resources for cost & environment clarity
+### CI/CD
 
-### 🔐 Security
+* GitHub Actions
+* Automated builds & deployments
+* Environment-based configs
 
-* GitHub Secrets used:
+### Production
 
-  * `AZURE_STATIC_WEB_APPS_API_TOKEN_CUSTOMER`
-* No hardcoded secrets in repo
-
-### ⚙️ CI/CD Workflow
-
-* Workflow File: `.github/workflows/framely-customer-deploy.yml`
-* Modular: Separate workflow per deployable (`framely-customer`, `framely-admin`)
-* Trigger: Push to `azure-deployment` branch
-* Steps: Checkout → Install deps → Build Next.js → Deploy to Azure SWA
-
-### 🧼 Config Hygiene
-
-* `next.config.ts` uses inferred typing
-* Enabled:
-
-  * `reactStrictMode`
-  * `trailingSlash`
-  * `styledComponents` compiler toggle
+* Azure Static Web Apps (current)
+* AKS-ready for future scaling
 
 ---
 
-## 📂 Deployment-Relevant Structure
+## 🔐 Security & Configuration
 
-```bash
-Framely/
-├── .github/
-│   └── workflows/
-│       └── framely-customer-deploy.yml
-├── frontend/
-│   └── framely-customer/
-│       ├── public/
-│       ├── src/
-│       ├── next.config.ts
-│       └── README.md  
-```
+* No secrets committed to the repository
+* Environment variables used for:
+
+  * API base URL
+  * Runtime configuration
+* JWT handled securely via client interceptors
 
 ---
 
 ## 📝 Notes
 
-* This project is **MVP ready** and already **deployed on Azure**
-* Ongoing development for **payment services**, **advanced checkout**, and **analytics**
-* Contributions, feedback, and improvements are always welcome 🚀
+* This is the **customer-facing frontend** of the Framely platform
+* Built as part of an **end-to-end DevOps Mega Project**
+* Designed to work seamlessly with:
+
+  * Docker
+  * Kubernetes (AKS)
+  * Azure Cloud services
+
+---
+
+## 🎯 Next Planned Enhancements
+
+* Payment gateway integration
+* Advanced checkout flow
+* Wishlist & recommendations
+* Performance optimizations
+* Analytics & tracking
+
+---
+
 
