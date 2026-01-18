@@ -1,0 +1,21 @@
+# ======================================================================
+# Kustomization: sql-server (stage)
+#
+# Purpose:
+# - GitOps entry point for SQL Server resources
+# - Allows ArgoCD to deploy database components together
+#
+# Notes:
+# - Database manifests are managed via GitOps
+# - Image tags are NOT dynamically updated (stable base image)
+# ======================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: framely-stage
+
+resources:
+  - secret.yaml
+  - deployment.yaml
+  - service.yaml

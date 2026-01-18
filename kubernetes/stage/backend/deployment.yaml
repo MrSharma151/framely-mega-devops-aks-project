@@ -4,11 +4,13 @@
 #
 # Purpose:
 # - Deploy the Backend API application
-# - Define container image, replicas, ports, and health checks
+# - Define container image, replicas, ports, health checks
+# - Configure database connectivity for Kubernetes
 #
 # Notes:
-# - Image tag will be updated by Jenkins via GitOps
-# - ArgoCD will sync this deployment automatically
+# - Image tag is updated by Jenkins via GitOps
+# - Database runs inside Kubernetes (sql-server Service)
+# - Sensitive values are injected via Kubernetes Secrets
 # ======================================================================
 
 apiVersion: apps/v1
@@ -38,8 +40,32 @@ spec:
               # Backend application listens on port 8080
 
           env:
+            # ------------------------------------------------------------
+            # Application Environment
+            # ------------------------------------------------------------
             - name: ASPNETCORE_ENVIRONMENT
               value: "Stage"
+
+            # ------------------------------------------------------------
+            # Database Configuration (Kubernetes Service DNS)
+            # ------------------------------------------------------------
+            - name: DB_HOST
+              value: "sql-server"                 # Service name
+            - name: DB_PORT
+              value: "1433"
+            - name: DB_NAME
+              value: "FramelyDb"
+            - name: DB_USER
+              value: "sa"
+
+            # ------------------------------------------------------------
+            # Database Password (Injected from Secret)
+            # ------------------------------------------------------------
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-server-secret
+                  key: SA_PASSWORD
 
           resources:
             requests:
