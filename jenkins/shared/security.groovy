@@ -10,7 +10,7 @@
 
  Design Principles:
  - Tool-agnostic (can plug Trivy, Snyk, Sonar later)
- - App-agnostic (driven via config)
+ - Config-driven with minimal app-specific logic
  - Fail-fast on critical issues
 ========================================================================
 */
@@ -26,24 +26,41 @@ def scan(app) {
 
         dir(app.path) {
 
-            /*
-             * Scan command strategy:
-             * - Defined per app in apps.yaml
-             * - Allows different tools per tech stack
-             */
-
-            if (!app.securityCommand) {
-                echo "⚠️ No securityCommand defined for ${app.name}. Skipping scan."
-                return
-            }
-
             try {
-                sh """
-                    echo "Executing security scan for ${app.name}"
-                    ${app.securityCommand}
-                """
-            }
-            catch (Exception e) {
+
+                /*
+                 * Backend (.NET) security scan
+                 * - Multi-project solution
+                 * - Dependency vulnerabilities scanned via solution file
+                 */
+                if (app.name == 'backend') {
+
+                    echo "Detected .NET backend application"
+                    echo "Scanning dependencies via solution file"
+
+                    sh '''
+                        dotnet list Framely/Framely.sln package --vulnerable
+                    '''
+                }
+                /*
+                 * All other applications (Node.js, etc.)
+                 * - Command defined in apps.yaml
+                 */
+                else {
+
+                    if (!app.securityCommand) {
+                        echo "⚠️ No securityCommand defined for ${app.name}. Skipping scan."
+                        return
+                    }
+
+                    echo "Executing security scan: ${app.securityCommand}"
+
+                    sh """
+                        ${app.securityCommand}
+                    """
+                }
+
+            } catch (Exception e) {
                 error """
                 ❌ Security scan failed for application: ${app.name}
 

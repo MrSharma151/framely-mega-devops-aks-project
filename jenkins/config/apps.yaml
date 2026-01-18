@@ -20,8 +20,7 @@ apps:
   # --------------------------------------------------------------------
   - name: backend
     path: apps/backend             # Path where Dockerfile and source code live
-    securityCommand: dotnet list package --vulnerable
-                                  # Basic dependency vulnerability check
+
 
   # --------------------------------------------------------------------
   # Admin Frontend Application
