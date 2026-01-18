@@ -4,118 +4,58 @@
  Framely – Mega DevOps AKS Project
 
  Purpose:
- - Continuous Integration pipeline for the 'main' branch
- - Validate correctness and quality of the system
- - Provide fast feedback without executing changes
+ - Scripted CI logic for the 'main' branch
+ - Executed from the root Jenkinsfile
+ - Performs validation-only CI checks
 
- What this pipeline DOES:
- - Run tests
- - Run security and quality scans
- - Build Docker images for verification
-
- What this pipeline DOES NOT do:
- - Push Docker images
- - Update GitOps repositories
- - Deploy to any environment
- - Apply infrastructure changes
-
- Principle:
- "main validates correctness, not execution"
+ Design Rules:
+ - NO declarative pipeline here
+ - NO agent / options / post blocks
+ - ONLY executable stages
 ========================================================================
 */
 
-def call() {
+def run(APPS_CONFIG, IMAGES_CONFIG) {
 
-    pipeline {
-        agent any
+    echo "=================================================="
+    echo "MAIN CI PIPELINE :: Validation Only"
+    echo "Environment : main"
+    echo "=================================================="
 
-        options {
-            disableConcurrentBuilds()
-            timestamps()
-            ansiColor('xterm')
-        }
+    stage('Run Tests') {
+        echo "Running unit and integration tests"
 
-        environment {
-            ENVIRONMENT = "main"
-        }
+        APPS_CONFIG.apps.each { app ->
+            echo "Executing tests for application: ${app.name}"
 
-        stages {
-
-            stage('Checkout Source Code') {
-                steps {
-                    checkout scm
-                }
-            }
-
-            stage('Load Configuration') {
-                steps {
-                    script {
-                        echo "Loading application configuration"
-
-                        // Read declarative configuration files
-                        APPS_CONFIG       = readYaml file: 'jenkins/config/apps.yaml'
-                        IMAGES_CONFIG     = readYaml file: 'jenkins/config/images.yaml'
-
-                        echo "Applications loaded: ${APPS_CONFIG.apps*.name}"
-                    }
-                }
-            }
-
-            stage('Run Tests') {
-                steps {
-                    script {
-                        echo "Running unit and integration tests"
-
-                        APPS_CONFIG.apps.each { app ->
-                            echo "Executing tests for: ${app.name}"
-                            load 'jenkins/shared/tests.groovy'
-                                .run(app)
-                        }
-                    }
-                }
-            }
-
-            stage('Security & Quality Scans') {
-                steps {
-                    script {
-                        echo "Running security and quality scans"
-
-                        APPS_CONFIG.apps.each { app ->
-                            echo "Scanning application: ${app.name}"
-                            load 'jenkins/shared/security.groovy'
-                                .scan(app)
-                        }
-                    }
-                }
-            }
-
-            stage('Docker Build (Verification Only)') {
-                steps {
-                    script {
-                        echo "Building Docker images for verification only"
-
-                        APPS_CONFIG.apps.each { app ->
-                            echo "Building image for: ${app.name}"
-                            load 'jenkins/shared/docker.groovy'
-                                .build(app, IMAGES_CONFIG, pushImage = false)
-                        }
-                    }
-                }
-            }
-        }
-
-        post {
-            success {
-                echo "✅ CI validation successful for main branch"
-            }
-
-            failure {
-                echo "❌ CI validation failed for main branch"
-            }
-
-            always {
-                cleanWs()
-            }
+            load('jenkins/shared/tests.groovy')
+                .run(app)
         }
     }
+
+    stage('Security & Quality Scans') {
+        echo "Running security and quality scans"
+
+        APPS_CONFIG.apps.each { app ->
+            echo "Scanning application: ${app.name}"
+
+            load('jenkins/shared/security.groovy')
+                .scan(app)
+        }
+    }
+
+    stage('Docker Build (Verification Only)') {
+        echo "Building Docker images (verification only)"
+
+        APPS_CONFIG.apps.each { app ->
+            echo "Building Docker image for: ${app.name}"
+
+            load('jenkins/shared/docker.groovy')
+                .build(app, IMAGES_CONFIG, false)
+        }
+    }
+
+    echo "✅ MAIN CI validation completed successfully"
 }
+
+return this
