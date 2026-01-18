@@ -9,6 +9,7 @@
 # IMPORTANT:
 # - This is still NOT production-grade (no HA, no backups)
 # - Designed for local / stage validation only
+# - VPC is intenionally not used here for simplicity and for faster kind testing
 # ======================================================================
 
 apiVersion: apps/v1
