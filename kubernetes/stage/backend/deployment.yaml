@@ -64,7 +64,7 @@ spec:
             # Database Password (LOCAL KIND ONLY)
             # ------------------------------------------------------------
             # NOTE:
-            # - Hardcoded ONLY for local KIND testing
+            # - Hardcoded ONLY for local KIND testing.
             # - No secrets are committed for local validation
             # - Will be replaced with managed DB + secure secrets in AKS
             - name: DB_PASSWORD
