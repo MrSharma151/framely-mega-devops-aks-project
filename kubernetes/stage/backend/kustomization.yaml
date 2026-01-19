@@ -25,4 +25,7 @@ namespace: framely-stage
 resources:
 - deployment.yaml
 - service.yaml
-
+images:
+- name: mrsharma151/backend
+  newName: mrsharma151/backend
+  newTag: 0.1.0-52b06c8
