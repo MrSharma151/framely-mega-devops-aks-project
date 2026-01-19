@@ -3,15 +3,12 @@
 # Environment: stage (local KIND)
 #
 # Purpose:
-# - Deploy the Backend API application
-# - Define container image, replicas, ports, and health checks
-# - Configure database connectivity for local Kubernetes testing
+# - Deploy Backend API
+# - Configuration mirrors docker-compose for parity
 #
 # IMPORTANT:
-# - Database credentials are hardcoded ONLY for local KIND testing
-# - This will be replaced with managed database + secret management
-#   when migrating to Azure AKS
-# - Image tag is managed via Kustomize (GitOps) by Jenkins
+# - Hardcoded values are ONLY for local KIND testing
+# - This will be replaced during AKS migration
 # ======================================================================
 
 apiVersion: apps/v1
@@ -22,7 +19,7 @@ metadata:
   labels:
     app: backend
 spec:
-  replicas: 2                      # Stage-level replicas
+  replicas: 2
   selector:
     matchLabels:
       app: backend
@@ -34,41 +31,33 @@ spec:
       containers:
         - name: backend
           image: framely/backend:latest
-          # Image name is a logical placeholder
-          # Actual image + tag is injected via Kustomize (GitOps)
+          # Actual image + tag injected via Kustomize (GitOps)
 
           ports:
             - containerPort: 8080
-              # Backend application listens on port 8080
 
           env:
             # ------------------------------------------------------------
-            # Application Environment
+            # ASP.NET Core Configuration
             # ------------------------------------------------------------
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Stage"
+              value: "Production"
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
 
             # ------------------------------------------------------------
-            # Database Configuration (Local Kubernetes Service)
+            # Database Connection (EXACT docker-compose match)
             # ------------------------------------------------------------
-            - name: DB_HOST
-              value: "sql-server"          # Kubernetes Service name
-            - name: DB_PORT
-              value: "1433"
-            - name: DB_NAME
-              value: "FramelyDb"
-            - name: DB_USER
-              value: "sa"
+            - name: ConnectionStrings__DefaultConnection
+              value: "Server=sql-server,1433;Database=FramelyDb;User Id=sa;Password=Str0ngP@ssw0rd123;TrustServerCertificate=True;"
 
             # ------------------------------------------------------------
-            # Database Password (LOCAL KIND ONLY)
+            # CORS / Frontend Origins
             # ------------------------------------------------------------
-            # NOTE:
-            # - Hardcoded ONLY for local KIND testing.
-            # - No secrets are committed for local validation
-            # - Will be replaced with managed DB + secure secrets in AKS
-            - name: DB_PASSWORD
-              value: "Str0ngP@ssw0rd123"
+            - name: FrontendOrigins__0
+              value: "http://frontend-customer"
+            - name: FrontendOrigins__1
+              value: "http://frontend-admin"
 
           resources:
             requests:
