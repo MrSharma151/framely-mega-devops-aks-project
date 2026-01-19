@@ -24,9 +24,3 @@ resources:
 - deployment.yaml
 - service.yaml
 
-images:
-- name: framely/frontend-admin
-  newTag: latest
-- name: mrsharma151/frontend-admin
-  newName: mrsharma151/frontend-admin
-  newTag: 0.1.0-112aa20
