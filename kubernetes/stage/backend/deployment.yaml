@@ -8,7 +8,7 @@
 #
 # IMPORTANT:
 # - Hardcoded values are ONLY for local KIND testing
-# - This will be replaced during AKS migration
+# - This will be replaced with secure configuration in Azure AKS
 # ======================================================================
 
 apiVersion: apps/v1
@@ -31,7 +31,7 @@ spec:
       containers:
         - name: backend
           image: framely/backend:latest
-          # Actual image + tag injected via Kustomize (GitOps)
+          # Actual image name + tag is injected via Kustomize (GitOps)
 
           ports:
             - containerPort: 8080
@@ -49,15 +49,30 @@ spec:
             # Database Connection (EXACT docker-compose match)
             # ------------------------------------------------------------
             - name: ConnectionStrings__DefaultConnection
-              value: "Server=sql-server,1433;Database=FramelyDb;User Id=sa;Password=Str0ngP@ssw0rd123;TrustServerCertificate=True;"
+              value: "Server=sql-server,1433;Database=FramelyDb;User Id=sa;Password=StrongPassword@123;TrustServerCertificate=True;Encrypt=False;"
 
             # ------------------------------------------------------------
-            # CORS / Frontend Origins
+            # JWT Authentication Configuration (LOCAL KIND ONLY)
             # ------------------------------------------------------------
+            # NOTE:
+            # - These values exist in appsettings.json inside the image
+            # - Explicitly provided here to avoid startup failure in Kubernetes
+            # - Will be replaced by secure secret management in AKS
+            - name: JwtSettings__Secret
+              value: "Framely_Super_Secret_JWT_Key_AtLeast_32_Characters_Long!!"
+            - name: JwtSettings__Issuer
+              value: "FramelyAPI"
+            - name: JwtSettings__Audience
+              value: "FramelyUsers"
+
+            # ------------------------------------------------------------
+            # CORS / Frontend Origins (LOCAL DEVELOPMENT)
+            # ------------------------------------------------------------
+            # Frontends are accessed via localhost from the browser
             - name: FrontendOrigins__0
-              value: "http://frontend-customer"
+              value: "http://localhost:3000"
             - name: FrontendOrigins__1
-              value: "http://frontend-admin"
+              value: "http://localhost:3001"
 
           resources:
             requests:

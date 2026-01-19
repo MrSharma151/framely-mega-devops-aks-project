@@ -1,25 +1,26 @@
 # ======================================================================
 # Deployment: frontend-customer
-# Environment: stage
+# Environment: stage (local KIND)
 #
 # Purpose:
 # - Deploy the Customer Frontend application
 # - Serve the customer-facing UI
 #
-# Notes:
-# - Image tag is managed via kustomization.yaml (GitOps)
-# - ArgoCD automatically syncs this deployment
+# IMPORTANT:
+# - Runtime configuration mirrors docker-compose
+# - NEXT_PUBLIC_* variables are required for API communication
+# - Backend is accessed via localhost:8082 in local KIND
 # ======================================================================
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-customer
-  namespace: framely-stage          # Dedicated namespace for stage environment
+  namespace: framely-stage
   labels:
     app: frontend-customer
 spec:
-  replicas: 2                       # Two replicas for availability (stage)
+  replicas: 2
   selector:
     matchLabels:
       app: frontend-customer
@@ -31,11 +32,19 @@ spec:
       containers:
         - name: frontend-customer
           image: framely/frontend-customer:latest
-          # Image tag will be updated by Jenkins via GitOps
+          # Image tag is managed via Kustomize (GitOps)
 
           ports:
             - containerPort: 80
               # Frontend container listens on port 80
+
+          env:
+            # ------------------------------------------------------------
+            # Frontend Runtime Configuration (LOCAL KIND)
+            # ------------------------------------------------------------
+            # Must match backend port-forward configuration
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://localhost:8082/api/v1"
 
           resources:
             requests:

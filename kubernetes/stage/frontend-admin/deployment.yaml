@@ -1,25 +1,26 @@
 # ======================================================================
 # Deployment: frontend-admin
-# Environment: stage
+# Environment: stage (local KIND)
 #
 # Purpose:
 # - Deploy the Admin Frontend application
-# - Define container image, replicas, ports, and basic health checks
+# - Define container image, replicas, ports, and health checks
 #
-# Notes:
-# - Image tag is managed via kustomization.yaml (GitOps)
-# - ArgoCD automatically syncs this deployment
+# IMPORTANT:
+# - Environment variables mirror docker-compose for local parity
+# - NEXT_PUBLIC_* variables are required for frontend runtime config
+# - Values will be updated when moving to Ingress / AKS
 # ======================================================================
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-admin
-  namespace: framely-stage          # Dedicated namespace for stage environment
+  namespace: framely-stage
   labels:
     app: frontend-admin
 spec:
-  replicas: 2                       # Two replicas for high availability (stage)
+  replicas: 2
   selector:
     matchLabels:
       app: frontend-admin
@@ -31,11 +32,19 @@ spec:
       containers:
         - name: frontend-admin
           image: framely/frontend-admin:latest
-          # Image tag will be updated by Jenkins via GitOps
+          # Image tag is managed via Kustomize (GitOps)
 
           ports:
             - containerPort: 80
-              # NGINX / frontend container listens on port 80
+              # NGINX serves frontend on port 80
+
+          env:
+            # ------------------------------------------------------------
+            # Frontend Runtime Configuration (LOCAL KIND)
+            # ------------------------------------------------------------
+            # This MUST match docker-compose for correct API calls
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://localhost:8082/api/v1"
 
           resources:
             requests:
