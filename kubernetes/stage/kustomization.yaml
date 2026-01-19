@@ -47,3 +47,6 @@ images:
 - name: mrsharma151/frontend-admin
   newName: mrsharma151/frontend-admin
   newTag: 0.1.0-5d98e22
+- name: mrsharma151/frontend-customer
+  newName: mrsharma151/frontend-customer
+  newTag: 0.1.0-5d98e22
