@@ -48,8 +48,8 @@ spec:
             # ------------------------------------------------------------
             # Database Connection (EXACT docker-compose match)
             # ------------------------------------------------------------
-           - name: ConnectionStrings__DefaultConnection
-             value: "Server=sql-server,1433;Database=FramelyDb;User Id=sa;Password=Str0ngP@ssw0rd123;TrustServerCertificate=True;Encrypt=False;"
+            - name: ConnectionStrings__DefaultConnection
+              value: "Server=sql-server,1433;Database=FramelyDb;User Id=sa;Password=Str0ngP@ssw0rd123;TrustServerCertificate=True;Encrypt=False;"
 
 
             # ------------------------------------------------------------
