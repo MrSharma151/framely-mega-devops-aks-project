@@ -6,19 +6,19 @@
 #
 # Purpose:
 # - Connect ArgoCD with Kubernetes manifests stored in Git
-# - Continuously sync the desired state from Git to the cluster
+# - Continuously reconcile the desired state from Git to the cluster
 #
 # This application:
-# - Watches kubernetes/stage directory
-# - Deploys all Framely services into framely-stage namespace
-# - Uses GitOps principles (Git = source of truth)
+# - Watches the kubernetes/stage directory
+# - Deploys all Framely services into the framely-stage namespace
+# - Follows strict GitOps principles (Git is the single source of truth)
 # ======================================================================
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: framely-stage
-  namespace: argocd                # ArgoCD control-plane namespace
+  namespace: argocd                 # ArgoCD control-plane namespace
 spec:
   # --------------------------------------------------------------------
   # ArgoCD Project this application belongs to
@@ -29,36 +29,34 @@ spec:
   # Source: Git repository containing Kubernetes manifests
   # --------------------------------------------------------------------
   source:
-    repoURL: https://github.com/<YOUR_GITHUB_USERNAME>/framely
-    targetRevision: stage          # Track the 'stage' branch only
-    path: kubernetes/stage          # GitOps manifests location
+    repoURL: https://github.com/MrSharma151/framely-aks-mega-devops.git
+    targetRevision: stage            # Track the 'stage' branch only
+    path: kubernetes/stage           # GitOps manifests location
 
-    # Kustomize is used to manage image tags and namespaces
-    kustomize:
-      # No extra configuration needed for now
-      # Image tags are updated by Jenkins in kustomization.yaml files
-      {}
+    # Kustomize is used for environment-specific customization
+    # Image tags are automatically updated by Jenkins
+    kustomize: {}
 
   # --------------------------------------------------------------------
-  # Destination: Kubernetes cluster and namespace
+  # Destination: Kubernetes cluster and target namespace
   # --------------------------------------------------------------------
   destination:
     server: https://kubernetes.default.svc
-    namespace: framely-stage       # All resources deploy here
+    namespace: framely-stage         # All resources are deployed here
 
   # --------------------------------------------------------------------
-  # Sync Policy
+  # Sync Policy: Fully automated for Stage environment
   # --------------------------------------------------------------------
   syncPolicy:
     automated:
-      prune: true                  # Remove resources deleted from Git
-      selfHeal: true               # Revert manual cluster changes
+      prune: true                    # Delete resources removed from Git
+      selfHeal: true                 # Revert any manual cluster changes
 
     syncOptions:
-      - CreateNamespace=true       # Auto-create namespace if missing
-      - ApplyOutOfSyncOnly=true    # Apply only when drift is detected
+      - CreateNamespace=true         # Create namespace if it does not exist
+      - ApplyOutOfSyncOnly=true      # Apply changes only when drift is detected
 
   # --------------------------------------------------------------------
-  # Optional: Revision history
+  # Application revision history retention
   # --------------------------------------------------------------------
   revisionHistoryLimit: 5
