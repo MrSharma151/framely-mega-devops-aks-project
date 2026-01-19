@@ -1,0 +1,29 @@
+# ======================================================================
+# Root Kustomization for Stage Environment
+#
+# Purpose:
+# - Aggregate all stage-level Kubernetes resources
+# - Act as the single entry point for ArgoCD
+#
+# ArgoCD points to this directory:
+# - kubernetes/stage
+# - This file controls what gets deployed
+# ======================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ----------------------------------------------------------------------
+# Namespace definition
+# ----------------------------------------------------------------------
+resources:
+  - namespace.yaml
+
+# ----------------------------------------------------------------------
+# Application and service components
+# Each sub-directory has its own kustomization.yaml
+# ----------------------------------------------------------------------
+  - backend
+  - database
+  - frontend-admin
+  - frontend-customer
