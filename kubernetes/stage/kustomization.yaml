@@ -37,7 +37,7 @@ images:
   newTag: 0.1.0-ef4d0a7
 - name: framely/frontend-admin
   newName: mrsharma151/frontend-admin
-  newTag: 0.1.0-795bf21
+  newTag: 0.1.0-ef4d0a7
 - name: framely/frontend-customer
   newName: mrsharma151/frontend-customer
   newTag: 0.1.0-795bf21
