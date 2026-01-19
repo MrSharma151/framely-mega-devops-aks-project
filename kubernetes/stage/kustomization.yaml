@@ -41,12 +41,3 @@ images:
 - name: framely/frontend-customer
   newName: mrsharma151/framely-frontend-customer
   newTag: 1.0.6
-- name: mrsharma151/backend
-  newName: mrsharma151/backend
-  newTag: 0.1.0-5d98e22
-- name: mrsharma151/frontend-admin
-  newName: mrsharma151/frontend-admin
-  newTag: 0.1.0-5d98e22
-- name: mrsharma151/frontend-customer
-  newName: mrsharma151/frontend-customer
-  newTag: 0.1.0-5d98e22
