@@ -33,6 +33,6 @@ resources:
 
 images:
 - name: framely/backend
+  newName: "null"
 - name: framely/frontend-admin
 - name: framely/frontend-customer
-
