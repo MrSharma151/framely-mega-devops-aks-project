@@ -37,3 +37,4 @@ images:
 - name: framely/frontend-admin
   newName: "null"
 - name: framely/frontend-customer
+  newName: "null"
