@@ -23,10 +23,12 @@ kind: Kustomization
 namespace: framely-stage
 
 resources:
-  - deployment.yaml
-  - service.yaml
+- deployment.yaml
+- service.yaml
 
 images:
-  - name: framely/backend
-    newTag: latest
-    # This tag is automatically updated by Jenkins (ci-stage pipeline)
+- name: framely/backend
+  newTag: latest
+- name: mrsharma151/backend
+  newName: mrsharma151/backend
+  newTag: 0.1.0-9d89d1f
