@@ -11,7 +11,7 @@ def updateImage(app, environment) {
 
         def gitopsPath = "kubernetes/${environment}/${app.name}"
 
-        // 🔥 FIX: Ensure we are on the correct branch (NOT detached HEAD)
+        // Ensure we are on the correct branch (avoid detached HEAD)
         sh """
             echo "Ensuring correct Git branch: ${environment}"
             git fetch origin ${environment}
@@ -19,6 +19,7 @@ def updateImage(app, environment) {
             git pull origin ${environment}
         """
 
+        // Update image tag using Kustomize
         dir(gitopsPath) {
             sh """
                 echo "Updating image tag in kustomization.yaml"
@@ -27,12 +28,28 @@ def updateImage(app, environment) {
             """
         }
 
+        // Commit changes
         sh """
             git status
             git add kubernetes/${environment}/${app.name}
             git commit -m "gitops(${environment}): update ${app.name} image to ${app.builtImage.tag}"
-            git push origin ${environment}
         """
+
+        // 🔐 Push using Jenkins GitHub credentials (PAT)
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'github-pat',
+                usernameVariable: 'GIT_USERNAME',
+                passwordVariable: 'GIT_TOKEN'
+            )
+        ]) {
+            sh """
+                git config user.name "Jenkins"
+                git config user.email "jenkins@framely.local"
+
+                git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/MrSharma151/framely-aks-mega-devops.git ${environment}
+            """
+        }
 
         echo "✅ GitOps update completed for ${app.name} (${environment})"
     }
