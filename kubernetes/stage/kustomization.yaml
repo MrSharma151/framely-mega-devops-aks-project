@@ -39,5 +39,5 @@ images:
   newName: mrsharma151/frontend-admin
   newTag: 0.1.0-795bf21
 - name: framely/frontend-customer
-  newName: mrsharma151/framely-frontend-customer
-  newTag: <jenkins-managed>
+  newName: mrsharma151/frontend-customer
+  newTag: 0.1.0-795bf21
