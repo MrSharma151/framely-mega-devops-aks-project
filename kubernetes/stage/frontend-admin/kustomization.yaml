@@ -29,4 +29,4 @@ images:
   newTag: latest
 - name: mrsharma151/frontend-admin
   newName: mrsharma151/frontend-admin
-  newTag: 0.1.0-0b865f2
+  newTag: 0.1.0-82b3da9
