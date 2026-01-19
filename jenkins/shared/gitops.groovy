@@ -6,13 +6,24 @@ def updateImage(app, environment) {
         echo "Updating Kubernetes manifests (GitOps)"
         echo "Application : ${app.name}"
         echo "Environment : ${environment}"
-        echo "Image       : ${app.builtImage.name}:${app.builtImage.tag}"
+        echo "Docker Image: ${app.builtImage.full}"
         echo "--------------------------------------------------"
 
         // 🔑 Root-level kustomization (single source of truth)
         def gitopsPath = "kubernetes/${environment}"
 
-        // Ensure we are on the correct branch
+        /*
+         * IMPORTANT:
+         * - LEFT side (kustomizeImageName) MUST match deployment.yaml image
+         * - RIGHT side (builtImage.full) is the real Docker image
+         *
+         * Example:
+         *   deployment.yaml -> image: framely/backend
+         *   kustomize edit  -> framely/backend=mrsharma151/framely-backend:1.0.x
+         */
+        def kustomizeImageName = "framely/${app.name}"
+
+        // Ensure correct branch
         sh """
             echo "Ensuring correct Git branch: ${environment}"
             git fetch origin ${environment}
@@ -20,13 +31,15 @@ def updateImage(app, environment) {
             git pull origin ${environment}
         """
 
-        // Update image tag in ROOT kustomization.yaml
+        // Update image in ROOT kustomization.yaml (UPDATE, not append)
         dir(gitopsPath) {
             sh """
-                echo "Updating image tag in root kustomization.yaml"
+                echo "Updating image mapping in root kustomization.yaml"
+                echo "Kustomize Image Name : ${kustomizeImageName}"
+                echo "Docker Image         : ${app.builtImage.full}"
 
                 kustomize edit set image \
-                  ${app.builtImage.name}=${app.builtImage.name}:${app.builtImage.tag}
+                  ${kustomizeImageName}=${app.builtImage.full}
             """
         }
 
@@ -53,7 +66,7 @@ def updateImage(app, environment) {
             """
         }
 
-        echo "✅ GitOps update completed for ${app.name} (${environment})"
+        echo "✅ GitOps image update completed for ${app.name} (${environment})"
     }
 }
 
