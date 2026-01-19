@@ -29,4 +29,4 @@ images:
   newTag: latest
 - name: mrsharma151/frontend-customer
   newName: mrsharma151/frontend-customer
-  newTag: 0.1.0-32f0fbb
+  newTag: 0.1.0-112aa20
