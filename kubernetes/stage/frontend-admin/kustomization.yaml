@@ -24,7 +24,3 @@ resources:
   - deployment.yaml
   - service.yaml
 
-images:
-  - name: framely/frontend-admin
-    newTag: latest
-    # This tag is automatically updated by Jenkins (ci-stage pipeline)
