@@ -5,19 +5,19 @@
 # Purpose:
 # - Define container registry details per environment
 # - Keep registry configuration out of pipelines
-# - Allow environment-specific isolation (stage vs prod)
+# - Allow environment-specific isolation
 #
 # NOTE:
-# - Actual credentials are stored in Jenkins Credentials Manager
+# - Credentials are stored in Jenkins Credentials Manager
 # - Pipelines only reference credential IDs
 # ======================================================================
 
 registries:
   stage:
-    type: acr
-    registryUrl: framelyacr.azurecr.io
-    repositoryPrefix: framely
-    credentialsId: acr-stage-creds
+    type: dockerhub
+    registryUrl: docker.io
+    repositoryPrefix: mrsharma151
+    credentialsId: dockerhub-creds
 
   prod:
     type: acr

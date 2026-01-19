@@ -7,16 +7,14 @@
 # - Keep image naming consistent across environments
 # - Decouple image naming from build logic
 #
-# NOTE:
-# - These are logical image names (not filesystem paths)
-# - Registry URL is resolved separately via registries.yaml
-# - Final image format:
-#   <registry>/<repository>/<image>:<tag>
+# Image Naming Convention (Docker Hub):
+#   <dockerhub-username>/<application-name>
+#
+# Example:
+#   mrsharma151/backend:abc123
 # ======================================================================
 
 images:
-  backend: framely/backend            # Backend API Docker image
-  frontend-admin: framely/frontend-admin
-                                     # Admin frontend Docker image
-  frontend-customer: framely/frontend-customer
-                                     # Customer frontend Docker image
+  backend: mrsharma151/backend
+  frontend-admin: mrsharma151/frontend-admin
+  frontend-customer: mrsharma151/frontend-customer

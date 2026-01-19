@@ -2,17 +2,6 @@
 ========================================================================
  Jenkinsfile
  Framely – Mega DevOps AKS Project
-
- Purpose:
- - Single entry point for Jenkins Multibranch Pipeline
- - Detect branch and route execution to the correct pipeline
- - Maintain strict separation of concerns
-
- Design Principles:
- - Branch = Environment
- - Jenkins handles CI + GitOps only
- - ArgoCD handles deployments
- - No business logic in this file
 ========================================================================
 */
 
@@ -20,9 +9,9 @@ pipeline {
     agent any
 
     options {
-        disableConcurrentBuilds()          // Prevent parallel runs on same branch
-        timestamps()                       // Add timestamps to logs
-        ansiColor('xterm')                 // Better log readability
+        disableConcurrentBuilds()
+        timestamps()
+        ansiColor('xterm')
     }
 
     environment {
@@ -37,21 +26,37 @@ pipeline {
                 script {
                     echo "Running pipeline for branch: ${env.BRANCH_NAME}"
 
-                    // Allow only defined long-lived branches
                     def allowedBranches = ['main', 'stage', 'prod']
-
                     if (!allowedBranches.contains(env.BRANCH_NAME)) {
                         error("""
-                        ❌ Invalid branch '${env.BRANCH_NAME}'
+                                ❌ Invalid branch '${env.BRANCH_NAME}'
 
-                        This Jenkins pipeline only supports:
-                        - main   (CI validation only)
-                        - stage  (CI + auto GitOps)
-                        - prod   (CI + manual delivery)
-
-                        Feature branches are validated via PRs only.
-                        """)
+                                Allowed branches:
+                                - main   (CI validation only)
+                                - stage  (CI + auto GitOps)
+                                - prod   (CI + manual delivery)
+                """)
                     }
+                }
+            }
+        }
+
+        stage('Checkout Source Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Load Configuration') {
+            steps {
+                script {
+                    echo "Loading pipeline configuration"
+
+                    APPS_CONFIG       = readYaml file: 'jenkins/config/apps.yaml'
+                    IMAGES_CONFIG     = readYaml file: 'jenkins/config/images.yaml'
+                    REGISTRIES_CONFIG = readYaml file: 'jenkins/config/registries.yaml'
+
+                    echo "Apps detected: ${APPS_CONFIG.apps*.name}"
                 }
             }
         }
@@ -61,18 +66,21 @@ pipeline {
                 script {
 
                     if (env.BRANCH_NAME == 'main') {
-                        echo "Routing to MAIN CI pipeline (validation only)"
-                        load "${JENKINS_DIR}/ci-main.groovy"
+                        echo "Routing to MAIN CI pipeline"
+                        load("${JENKINS_DIR}/ci-main.groovy")
+                            .run(APPS_CONFIG, IMAGES_CONFIG)
                     }
 
                     else if (env.BRANCH_NAME == 'stage') {
-                        echo "Routing to STAGE pipeline (CI + auto GitOps)"
-                        load "${JENKINS_DIR}/ci-stage.groovy"
+                        echo "Routing to STAGE pipeline"
+                        load("${JENKINS_DIR}/ci-stage.groovy")
+                            .run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG)
                     }
 
                     else if (env.BRANCH_NAME == 'prod') {
-                        echo "Routing to PROD pipeline (CI + manual approval)"
-                        load "${JENKINS_DIR}/ci-prod.groovy"
+                        echo "Routing to PROD pipeline"
+                        load("${JENKINS_DIR}/ci-prod.groovy")
+                            .run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG)
                     }
                 }
             }
@@ -89,7 +97,7 @@ pipeline {
         }
 
         always {
-            cleanWs()   // Clean workspace after every run
+            cleanWs()
         }
     }
 }

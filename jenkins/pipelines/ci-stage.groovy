@@ -4,116 +4,71 @@
  Framely – Mega DevOps AKS Project
 
  Purpose:
- - Continuous Integration + Continuous Deployment for STAGE
- - Build, test, scan applications
- - Push Docker images to registry
- - Update Kubernetes manifests (GitOps)
- - Trigger ArgoCD auto-sync via Git change
+ - Scripted CI/CD logic for the 'stage' branch
+ - Executed from the root Jenkinsfile
+ - Build, test, scan, push images, and update GitOps manifests
 
- Environment Characteristics:
- - Automatic execution
- - No manual approvals
- - Fast feedback loop
-
- Principle:
- "Stage follows Continuous Deployment"
+ Design Rules:
+ - NO declarative pipeline here
+ - NO agent / options / post blocks
+ - ONLY executable stages
+ - Jenkins updates Git, ArgoCD deploys
 ========================================================================
 */
 
-def call() {
+def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
 
-    pipeline {
-        agent any
+    echo "=================================================="
+    echo "STAGE PIPELINE :: CI + Continuous Deployment"
+    echo "Environment : stage"
+    echo "=================================================="
 
-        options {
-            disableConcurrentBuilds()
-            timestamps()
-            ansiColor('xterm')
-        }
+    stage('Run Tests') {
+        echo "Running unit and integration tests"
 
-        environment {
-            ENVIRONMENT = "stage"
-        }
+        APPS_CONFIG.apps.each { app ->
+            echo "Executing tests for application: ${app.name}"
 
-        stages {
-
-            stage('Checkout Source Code') {
-                steps {
-                    checkout scm
-                }
-            }
-
-            stage('Load Configuration') {
-                steps {
-                    script {
-                        echo "Loading pipeline configuration"
-
-                        APPS_CONFIG   = readYaml file: 'jenkins/config/apps.yaml'
-                        IMAGES_CONFIG = readYaml file: 'jenkins/config/images.yaml'
-
-                        echo "Applications loaded: ${APPS_CONFIG.apps*.name}"
-                    }
-                }
-            }
-
-            stage('Run Tests') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/tests.groovy'
-                                .run(app)
-                        }
-                    }
-                }
-            }
-
-            stage('Security & Quality Scans') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/security.groovy'
-                                .scan(app)
-                        }
-                    }
-                }
-            }
-
-            stage('Docker Build & Push') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/docker.groovy'
-                                .build(app, IMAGES_CONFIG, true)
-                        }
-                    }
-                }
-            }
-
-            stage('GitOps Update (Stage)') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/gitops.groovy'
-                                .updateImage(app, ENVIRONMENT)
-                        }
-                    }
-                }
-            }
-        }
-
-        post {
-            success {
-                echo "✅ Stage pipeline completed successfully"
-                echo "ArgoCD will auto-sync changes to the STAGE cluster"
-            }
-
-            failure {
-                echo "❌ Stage pipeline failed"
-            }
-
-            always {
-                cleanWs()
-            }
+            load('jenkins/shared/tests.groovy')
+                .run(app)
         }
     }
+
+    stage('Security & Quality Scans') {
+        echo "Running security and quality scans (ENFORCED)"
+
+        APPS_CONFIG.apps.each { app ->
+            echo "Scanning application: ${app.name}"
+
+            load('jenkins/shared/security.groovy')
+                .scan(app)
+        }
+    }
+
+    stage('Docker Build & Push') {
+        echo "Building and pushing Docker images to STAGE registry"
+
+        APPS_CONFIG.apps.each { app ->
+            echo "Building & pushing image for: ${app.name}"
+
+            load('jenkins/shared/docker.groovy')
+                .build(app, IMAGES_CONFIG, true)
+        }
+    }
+
+    stage('GitOps Update (Stage)') {
+        echo "Updating GitOps manifests for STAGE environment"
+
+        APPS_CONFIG.apps.each { app ->
+            echo "Updating image tag for application: ${app.name}"
+
+            load('jenkins/shared/gitops.groovy')
+                .updateImage(app, 'stage')
+        }
+    }
+
+    echo "✅ STAGE pipeline completed successfully"
+    echo "ArgoCD will automatically sync changes to the STAGE cluster"
 }
+
+return this

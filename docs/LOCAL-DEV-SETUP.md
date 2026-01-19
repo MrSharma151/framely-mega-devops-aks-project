@@ -29,7 +29,13 @@ Later, the same setup is migrated to **AKS** with minimal changes.
 
 ## 🧰 Prerequisites (One-Time Setup)
 
-Make sure the following tools are installed on your **WSL2 Ubuntu system / any Linux distro**:
+Make sure the following tools are installed on your **WSL2 Ubuntu system / any Linux distro**.
+
+> ⚠️ **Important Note (Jenkins User)**
+> Jenkins runs as a **separate system user (`jenkins`)**.
+> Any tool used inside pipelines **must be installed globally** and accessible to the Jenkins user via `PATH`.
+
+### Core Platform & DevOps Tools
 
 | Tool       | Purpose                                    |
 | ---------- | ------------------------------------------ |
@@ -40,6 +46,21 @@ Make sure the following tools are installed on your **WSL2 Ubuntu system / any L
 | Jenkins    | CI server (runs locally, not in container) |
 | ArgoCD CLI | GitOps interaction                         |
 | Git        | Source control                             |
+
+---
+
+### Application Runtime & Build Tools (Mandatory for CI)
+
+These tools are **required by Jenkins pipelines** to run tests and build images.
+
+| Tool         | Purpose                                      | Requirement        |
+| ------------ | -------------------------------------------- | ------------------ |
+| .NET SDK 9.x | Build & test Backend (.NET API + Tests)      | **Global install** |
+| Node.js 20.x | Build & test Frontend applications (Next.js) | **Global install** |
+| npm          | Dependency management & test execution       | Comes with Node    |
+| Docker CLI   | Image build & push                           | **Global install** |
+
+> ✅ These tools **must be accessible to the Jenkins user**, not only the logged-in Linux user.
 
 ---
 
@@ -54,6 +75,19 @@ kind version
 helm version
 git --version
 argocd version --client
+
+dotnet --version
+node --version
+npm --version
+```
+
+Also verify Jenkins user access:
+
+```bash
+sudo -u jenkins dotnet --version
+sudo -u jenkins node --version
+sudo -u jenkins npm --version
+docker ps
 ```
 
 ---
@@ -133,7 +167,6 @@ nodes:
 
   - role: worker
     image: kindest/node:v1.33.1
-
 ```
 
 Save and exit.
@@ -178,12 +211,6 @@ kubectl wait --namespace ingress-nginx \
   --timeout=120s
 ```
 
-Verify:
-
-```bash
-kubectl get pods -n ingress-nginx
-```
-
 ---
 
 ### 3.2 Install ArgoCD
@@ -194,77 +221,11 @@ kubectl apply -n argocd \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
 
-Wait for pods:
-
-```bash
-kubectl get pods -n argocd
-```
-
----
-
-## 🔐 Phase 4 – Access ArgoCD Locally
-
-⚠️ Jenkins already uses **localhost:8000**, so ArgoCD is exposed on **8081**.
-
-### 4.1 Port Forward ArgoCD Server
-
-```bash
-kubectl port-forward svc/argocd-server -n argocd 8081:443
-```
-
----
-
-### 4.2 Access ArgoCD UI
-
-Open browser:
-
-```
-https://localhost:8081
-```
-
-> Ignore SSL warning (self-signed certificate)
-
----
-
-### 4.3 Login Credentials
-
-Username:
-
-```
-admin
-```
-
-Password:
-
-```bash
-kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" | base64 -d && echo
-```
-
----
-
-## 🧪 Phase 5 – Final Sanity Check
-
-Run:
-
-```bash
-kubectl get nodes
-kubectl get ns
-kubectl get pods -A
-```
-
-You should see namespaces like:
-
-* `argocd`
-* `ingress-nginx`
-* `kube-system`
-* `default`
-
 ---
 
 ## 🔗 Jenkins (Local)
 
-Jenkins is running **locally on the host**, not inside Kubernetes.
+Jenkins runs **directly on the host machine**, not inside Kubernetes.
 
 Access Jenkins at:
 
@@ -272,11 +233,14 @@ Access Jenkins at:
 http://localhost:8000
 ```
 
-Jenkins responsibilities in local setup:
+### Jenkins Responsibilities
 
+* Run unit & integration tests
 * Build Docker images
-* Run tests
-* Update Git (GitOps image tags)
+* Push images to registry (Docker Hub / ACR)
+* Update Git repositories (GitOps)
+
+> ❗ Jenkins **never deploys** to Kubernetes directly.
 
 ---
 
@@ -294,28 +258,26 @@ Jenkins responsibilities in local setup:
 
 ---
 
-## 🚀 What’s Next?
-
-With local setup complete, next phases include:
-
-1. Create ArgoCD Project
-2. Create ArgoCD Application (dev overlay)
-3. Deploy Framely services via GitOps
-4. Validate CI → Git → ArgoCD → Kubernetes flow
-5. Migrate same setup to AKS using Terraform
-
----
-
 ## ✅ Status
 
 * Local Kubernetes: ✅ Ready
 * Jenkins: ✅ Ready
 * ArgoCD: ✅ Ready
-* Apps (Dockerized): ✅ Ready
+* Runtime Tooling (Dotnet / Node): ✅ Ready
+* CI Pipelines (`ci-main`): ✅ Stable
 * GitOps Flow: 🔜 Next
 
 ---
 
-💡 **This document serves as the single source of truth for local testing and onboarding.**
+💡 **This document is the single source of truth for local testing, CI validation, and onboarding.**
 
 ---
+
+### 🔥 Final Note (Very Important)
+
+> Any machine that runs Jenkins (local VM or AKS VM later)
+> **must have Dotnet, Node.js, npm, Docker installed globally**
+> otherwise CI pipelines will fail.
+
+---
+
