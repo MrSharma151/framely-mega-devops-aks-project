@@ -31,4 +31,4 @@ images:
   newTag: latest
 - name: mrsharma151/backend
   newName: mrsharma151/backend
-  newTag: 0.1.0-1970322
+  newTag: 0.1.0-c708595
