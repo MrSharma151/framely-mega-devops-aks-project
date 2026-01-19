@@ -9,9 +9,10 @@ def updateImage(app, environment) {
         echo "Image       : ${app.builtImage.name}:${app.builtImage.tag}"
         echo "--------------------------------------------------"
 
-        def gitopsPath = "kubernetes/${environment}/${app.name}"
+        // 🔑 Root-level kustomization (single source of truth)
+        def gitopsPath = "kubernetes/${environment}"
 
-        // Ensure we are on the correct branch (avoid detached HEAD)
+        // Ensure we are on the correct branch
         sh """
             echo "Ensuring correct Git branch: ${environment}"
             git fetch origin ${environment}
@@ -19,23 +20,24 @@ def updateImage(app, environment) {
             git pull origin ${environment}
         """
 
-        // Update image tag using Kustomize
+        // Update image tag in ROOT kustomization.yaml
         dir(gitopsPath) {
             sh """
-                echo "Updating image tag in kustomization.yaml"
+                echo "Updating image tag in root kustomization.yaml"
+
                 kustomize edit set image \
                   ${app.builtImage.name}=${app.builtImage.name}:${app.builtImage.tag}
             """
         }
 
-        // Commit changes with [skip ci] to prevent pipeline loop
+        // Commit ONLY root kustomization
         sh """
             git status
-            git add kubernetes/${environment}/${app.name}
+            git add kubernetes/${environment}/kustomization.yaml
             git commit -m "gitops(${environment}): update ${app.name} image to ${app.builtImage.tag} [skip ci]"
         """
 
-        // Push using Jenkins GitHub credentials (PAT)
+        // Push changes
         withCredentials([
             usernamePassword(
                 credentialsId: 'github-pat',
