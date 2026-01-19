@@ -1,27 +1,28 @@
 # ======================================================================
 # Deployment: backend
-# Environment: stage
+# Environment: stage (local KIND)
 #
 # Purpose:
 # - Deploy the Backend API application
-# - Define container image, replicas, ports, health checks
-# - Configure database connectivity for Kubernetes
+# - Define container image, replicas, ports, and health checks
+# - Configure database connectivity for local Kubernetes testing
 #
-# Notes:
-# - Image tag is updated by Jenkins via GitOps
-# - Database runs inside Kubernetes (sql-server Service)
-# - Sensitive values are injected via Kubernetes Secrets
+# IMPORTANT:
+# - Database credentials are hardcoded ONLY for local KIND testing
+# - This will be replaced with managed database + secret management
+#   when migrating to Azure AKS
+# - Image tag is managed via Kustomize (GitOps) by Jenkins
 # ======================================================================
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: framely-stage        # Dedicated namespace for stage environment
+  namespace: framely-stage
   labels:
     app: backend
 spec:
-  replicas: 2                     # Number of backend pods (stage level)
+  replicas: 2                      # Stage-level replicas
   selector:
     matchLabels:
       app: backend
@@ -33,7 +34,8 @@ spec:
       containers:
         - name: backend
           image: framely/backend:latest
-          # Image tag is managed via kustomization.yaml (GitOps)
+          # Image name is a logical placeholder
+          # Actual image + tag is injected via Kustomize (GitOps)
 
           ports:
             - containerPort: 8080
@@ -47,10 +49,10 @@ spec:
               value: "Stage"
 
             # ------------------------------------------------------------
-            # Database Configuration (Kubernetes Service DNS)
+            # Database Configuration (Local Kubernetes Service)
             # ------------------------------------------------------------
             - name: DB_HOST
-              value: "sql-server"                 # Service name
+              value: "sql-server"          # Kubernetes Service name
             - name: DB_PORT
               value: "1433"
             - name: DB_NAME
@@ -59,13 +61,14 @@ spec:
               value: "sa"
 
             # ------------------------------------------------------------
-            # Database Password (Injected from Secret)
+            # Database Password (LOCAL KIND ONLY)
             # ------------------------------------------------------------
+            # NOTE:
+            # - Hardcoded ONLY for local KIND testing
+            # - No secrets are committed for local validation
+            # - Will be replaced with managed DB + secure secrets in AKS
             - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: sql-server-secret
-                  key: SA_PASSWORD
+              value: "Str0ngP@ssw0rd123"
 
           resources:
             requests:
