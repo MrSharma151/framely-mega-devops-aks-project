@@ -21,6 +21,35 @@ pipeline {
 
     stages {
 
+        /*
+        ================================================================
+        CI GUARD STAGE (🔥 MOST IMPORTANT)
+        ------------------------------------------------
+        Purpose:
+        - Prevent infinite CI loop caused by GitOps commits
+        - Skip pipeline execution if commit message contains [skip ci]
+        ================================================================
+        */
+        stage('CI Guard') {
+            steps {
+                script {
+                    def commitMessage = sh(
+                        script: "git log -1 --pretty=%B",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Last commit message:"
+                    echo commitMessage
+
+                    if (commitMessage.contains('[skip ci]')) {
+                        echo "🛑 GitOps commit detected ([skip ci]). Skipping pipeline execution."
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+                }
+            }
+        }
+
         stage('Branch Validation') {
             steps {
                 script {
@@ -29,13 +58,13 @@ pipeline {
                     def allowedBranches = ['main', 'stage', 'prod']
                     if (!allowedBranches.contains(env.BRANCH_NAME)) {
                         error("""
-                                ❌ Invalid branch '${env.BRANCH_NAME}'
+❌ Invalid branch '${env.BRANCH_NAME}'
 
-                                Allowed branches:
-                                - main   (CI validation only)
-                                - stage  (CI + auto GitOps)
-                                - prod   (CI + manual delivery)
-                """)
+Allowed branches:
+- main   (CI validation only)
+- stage  (CI + auto GitOps)
+- prod   (CI + manual delivery)
+""")
                     }
                 }
             }
