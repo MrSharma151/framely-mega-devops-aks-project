@@ -24,4 +24,3 @@ resources:
 - deployment.yaml
 - service.yaml
 
-

@@ -23,4 +23,3 @@ namespace: framely-stage
 resources:
 - deployment.yaml
 - service.yaml
-

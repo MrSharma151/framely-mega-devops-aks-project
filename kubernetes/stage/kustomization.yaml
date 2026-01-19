@@ -16,17 +16,17 @@ kind: Kustomization
 # ----------------------------------------------------------------------
 # Namespace definition
 # ----------------------------------------------------------------------
-resources:
-  - namespace.yaml
 
 # ----------------------------------------------------------------------
 # Application and service components
 # Each sub-directory has its own kustomization.yaml
 # ----------------------------------------------------------------------
-  - database
-  - backend
-  - frontend-admin
-  - frontend-customer
+resources:
+- namespace.yaml
+- database
+- backend
+- frontend-admin
+- frontend-customer
 
 # image overrides for stage environment
 images:
