@@ -254,9 +254,8 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine("❌ DATABASE / SEED FAILED");
+        Console.WriteLine("⚠️ DATABASE / SEED FAILED – will retry on next restart");
         Console.WriteLine(ex);
-        throw;
     }
 }
 
