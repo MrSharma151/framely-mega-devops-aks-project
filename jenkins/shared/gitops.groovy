@@ -28,14 +28,14 @@ def updateImage(app, environment) {
             """
         }
 
-        // Commit changes
+        // Commit changes with [skip ci] to prevent pipeline loop
         sh """
             git status
             git add kubernetes/${environment}/${app.name}
-            git commit -m "gitops(${environment}): update ${app.name} image to ${app.builtImage.tag}"
+            git commit -m "gitops(${environment}): update ${app.name} image to ${app.builtImage.tag} [skip ci]"
         """
 
-        // 🔐 Push using Jenkins GitHub credentials (PAT)
+        // Push using Jenkins GitHub credentials (PAT)
         withCredentials([
             usernamePassword(
                 credentialsId: 'github-pat',
