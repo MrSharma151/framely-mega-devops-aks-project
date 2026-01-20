@@ -12,9 +12,9 @@ spec:
     - host: localhost
       http:
         paths:
-          # ---------------- Backend API (NO rewrite issue) ----------------
+          # ---------------- Backend API ----------------
           - path: /api(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: backend
@@ -23,7 +23,7 @@ spec:
 
           # ---------------- Admin Frontend ----------------
           - path: /admin(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: frontend-admin
@@ -32,7 +32,7 @@ spec:
 
           # ---------------- Customer Frontend ----------------
           - path: /app(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: frontend-customer
