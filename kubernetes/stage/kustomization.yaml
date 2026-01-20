@@ -35,7 +35,7 @@ resources:
 images:
 - name: framely/backend
   newName: mrsharma151/backend
-  newTag: 0.1.0-65df79c
+  newTag: 0.1.0-21e80c1
 - name: framely/frontend-admin
   newName: mrsharma151/frontend-admin
   newTag: 0.1.0-65df79c
