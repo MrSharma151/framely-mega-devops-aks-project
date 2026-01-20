@@ -4,12 +4,13 @@ import Button from "@/components/ui/Button";
 
 // Full-width hero banner with background image, overlay, and CTA
 export default function HeroSection() {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
   return (
     <section className="relative w-full h-[60vh] sm:h-[65vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
       {/* Background image (cover + center) */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/hero-banner.jpg')" }}
+        style={{ backgroundImage: `url('${basePath}/images/hero-banner.jpg')` }}
       />
 
       {/* Dark gradient overlay for contrast and readability */}

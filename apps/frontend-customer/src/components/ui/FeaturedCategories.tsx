@@ -2,11 +2,12 @@ import Link from "next/link";
 
 // Displays featured product categories with image overlays and hover effects
 export default function FeaturedCategories() {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const categories = [
-    { name: "Men's Eyewear", image: "/images/categories/men.jpg" },
-    { name: "Women's Eyewear", image: "/images/categories/women.jpg" },
-    { name: "Kids' Eyewear", image: "/images/categories/kids.jpg" },
-    { name: "Sunglasses", image: "/images/categories/sunglasses.jpg" },
+    { name: "Men's Eyewear", image: `${basePath}/images/categories/men.jpg` },
+    { name: "Women's Eyewear", image: `${basePath}/images/categories/women.jpg` },
+    { name: "Kids' Eyewear", image: `${basePath}/images/categories/kids.jpg` },
+    { name: "Sunglasses", image: `${basePath}/images/categories/sunglasses.jpg` },
   ];
 
   return (

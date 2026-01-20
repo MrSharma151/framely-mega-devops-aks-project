@@ -5,12 +5,22 @@ metadata:
   namespace: framely-stage
   annotations:
     kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
     - host: localhost
       http:
         paths:
-          - path: /admin
+          - path: /api(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+
+          - path: /admin(/|$)(.*)
             pathType: Prefix
             backend:
               service:
@@ -18,18 +28,10 @@ spec:
                 port:
                   number: 80
 
-          - path: /app
+          - path: /app(/|$)(.*)
             pathType: Prefix
             backend:
               service:
                 name: frontend-customer
-                port:
-                  number: 80
-
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: backend
                 port:
                   number: 80

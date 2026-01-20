@@ -18,7 +18,7 @@ apps:
 
     buildArgs:
       NEXT_PUBLIC_BASE_PATH: /admin
-      NEXT_PUBLIC_API_BASE_URL: http://localhost/api
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082/api
 
 
   # --------------------------------------------------------------------
@@ -32,4 +32,4 @@ apps:
 
     buildArgs:
       NEXT_PUBLIC_BASE_PATH: /app
-      NEXT_PUBLIC_API_BASE_URL: http://localhost/api
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082/api
