@@ -50,7 +50,9 @@ WORKDIR /app
 # --chown avoids extra chown layer (image size optimization)
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nextjs /app/public ./public
+
+# there is no public folder in this setup, so we skip copying it
+# COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 
 # Switch to non-root user
 USER nextjs
