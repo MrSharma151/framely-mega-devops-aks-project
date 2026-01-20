@@ -1,18 +1,3 @@
-# ======================================================================
-# StatefulSet: sql-server
-# Environment: stage (local KIND)
-#
-# Purpose:
-# - Run SQL Server as a stateful workload for local testing
-# - Provide a database backend for application validation
-#
-# IMPORTANT:
-# - This setup is strictly for local / stage testing
-# - Credentials are intentionally hardcoded for simplicity
-# - Production will use a managed database service (AKS)
-# - No containerized database will be used in production
-# ======================================================================
-
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -22,10 +7,11 @@ metadata:
     app: sql-server
 spec:
   serviceName: sql-server
-  replicas: 1                      # Single instance for local testing
+  replicas: 1
   selector:
     matchLabels:
       app: sql-server
+
   template:
     metadata:
       labels:
@@ -36,17 +22,24 @@ spec:
           image: mcr.microsoft.com/mssql/server:2022-latest
 
           ports:
-            - containerPort: 1433   # Default SQL Server port
+            - containerPort: 1433
 
           env:
             - name: ACCEPT_EULA
               value: "Y"
+
             - name: MSSQL_PID
               value: "Developer"
 
-            # Hardcoded password for local KIND testing only
             - name: SA_PASSWORD
-              value: "Str0ngP@ssw0rd123"
+              valueFrom:
+                secretKeyRef:
+                  name: sql-server-secret
+                  key: SA_PASSWORD
+
+          volumeMounts:
+            - name: sql-data
+              mountPath: /var/opt/mssql
 
           resources:
             requests:
@@ -55,3 +48,13 @@ spec:
             limits:
               cpu: "1"
               memory: "1Gi"
+
+  volumeClaimTemplates:
+    - metadata:
+        name: sql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

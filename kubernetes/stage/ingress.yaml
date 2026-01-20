@@ -5,13 +5,15 @@ metadata:
   namespace: framely-stage
   annotations:
     kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - host: api.framely.local
+    - host: localhost
       http:
         paths:
-          - path: /
+          # ------------------------------------------------------------
+          # Backend API
+          # ------------------------------------------------------------
+          - path: /api
             pathType: Prefix
             backend:
               service:
@@ -19,10 +21,10 @@ spec:
                 port:
                   number: 80
 
-    - host: admin.framely.local
-      http:
-        paths:
-          - path: /
+          # ------------------------------------------------------------
+          # Admin Frontend
+          # ------------------------------------------------------------
+          - path: /admin
             pathType: Prefix
             backend:
               service:
@@ -30,10 +32,10 @@ spec:
                 port:
                   number: 80
 
-    - host: app.framely.local
-      http:
-        paths:
-          - path: /
+          # ------------------------------------------------------------
+          # Customer Frontend
+          # ------------------------------------------------------------
+          - path: /app
             pathType: Prefix
             backend:
               service:

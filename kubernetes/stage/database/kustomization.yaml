@@ -16,5 +16,6 @@ kind: Kustomization
 namespace: framely-stage
 
 resources:
-  - statefulset.yaml
+  - secret.yaml
   - service.yaml
+  - statefulset.yaml

@@ -1,21 +1,8 @@
-# ======================================================================
-# Service: backend
-# Environment: stage
-#
-# Purpose:
-# - Expose the Backend API internally within the cluster
-# - Acts as a stable endpoint for other services or Ingress
-#
-# Notes:
-# - Service type is ClusterIP (internal access only)
-# - Deployed into a dedicated namespace for environment isolation
-# ======================================================================
-
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
-  namespace: framely-stage        # Dedicated namespace for stage environment
+  namespace: framely-stage
   labels:
     app: backend
 spec:
@@ -24,5 +11,5 @@ spec:
     app: backend
   ports:
     - name: http
-      port: 80               # Service port
-      targetPort: 8080       # Container port
+      port: 80
+      targetPort: 8080

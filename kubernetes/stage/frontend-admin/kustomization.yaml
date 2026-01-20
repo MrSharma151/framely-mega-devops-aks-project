@@ -1,25 +1,8 @@
-# ======================================================================
-# Kustomization: frontend-admin (stage)
-#
-# Purpose:
-# - Acts as the GitOps control file for the Admin Frontend
-# - Jenkins updates the Docker image tag here
-# - ArgoCD watches this file and applies changes automatically
-#
-# Why namespace is defined here?
-# - Ensures all resources are deployed into the correct namespace
-# - Avoids accidental deployment into the default namespace
-#
-# IMPORTANT:
-# - Do NOT hardcode image tags in deployment.yaml
-# ======================================================================
-
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# All frontend-admin resources will be deployed into this namespace
 namespace: framely-stage
 
 resources:
-- deployment.yaml
-- service.yaml
+  - deployment.yaml
+  - service.yaml

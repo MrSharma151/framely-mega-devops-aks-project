@@ -1,20 +1,8 @@
-# ======================================================================
-# Service: frontend-customer
-# Environment: stage
-#
-# Purpose:
-# - Expose the Customer Frontend internally within the cluster
-# - Acts as a stable backend for Ingress routing
-#
-# Notes:
-# - Service type is ClusterIP (internal access only)
-# ======================================================================
-
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend-customer
-  namespace: framely-stage          # Dedicated namespace for stage environment
+  namespace: framely-stage
   labels:
     app: frontend-customer
 spec:
@@ -23,5 +11,5 @@ spec:
     app: frontend-customer
   ports:
     - name: http
-      port: 80               # Service port
-      targetPort: 80         # Container port
+      port: 80
+      targetPort: 3000
