@@ -1,42 +1,35 @@
-# ======================================================================
-# apps.yaml
-# Framely – Mega DevOps AKS Project
-#
-# Purpose:
-# - Declare all applications handled by Jenkins pipelines
-# - Provide application-specific metadata in a declarative way
-# - Allow pipelines to remain generic and loop-based
-#
-# NOTE:
-# - Each application must have a Dockerfile in its path
-# - VERSION file (if present) can be used later for release tagging
-# - Pipelines will iterate over this list automatically
-# ======================================================================
-
 apps:
   # --------------------------------------------------------------------
   # Backend API service
-  # Technology: .NET
   # --------------------------------------------------------------------
   - name: backend
-    path: apps/backend             # Path where Dockerfile and source code live
+    type: backend
+    path: apps/backend
 
 
   # --------------------------------------------------------------------
   # Admin Frontend Application
-  # Technology: Node.js / Next.js
   # --------------------------------------------------------------------
   - name: frontend-admin
-    path: apps/frontend-admin      # Application source + Dockerfile location
-    testCommand: npm test           # Run unit / component tests
+    type: frontend
+    path: apps/frontend-admin
+    testCommand: npm test
     securityCommand: npm audit --audit-level=high
-                                  # Fail build if high/critical vulns found
+
+    buildArgs:
+      NEXT_PUBLIC_BASE_PATH: /admin
+      NEXT_PUBLIC_API_BASE_URL: http://localhost/api
+
 
   # --------------------------------------------------------------------
   # Customer Frontend Application
-  # Technology: Node.js / Next.js
   # --------------------------------------------------------------------
   - name: frontend-customer
-    path: apps/frontend-customer   # Application source + Dockerfile location
+    type: frontend
+    path: apps/frontend-customer
     testCommand: npm test
     securityCommand: npm audit --audit-level=high
+
+    buildArgs:
+      NEXT_PUBLIC_BASE_PATH: /app
+      NEXT_PUBLIC_API_BASE_URL: http://localhost/api

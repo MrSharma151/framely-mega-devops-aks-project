@@ -7,6 +7,17 @@ FROM node:20.11.1-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# -----------------------------
+# Build-time arguments
+# Injected by Jenkins / local docker build
+# -----------------------------
+ARG NEXT_PUBLIC_BASE_PATH=""
+ARG NEXT_PUBLIC_API_BASE_URL=""
+
+# Make build-time args available to Next.js
+ENV NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
 # Copy dependency manifests first for better caching
 COPY package.json package-lock.json ./
 
@@ -25,7 +36,7 @@ RUN npm run build
 # ----------------------------------------------------
 FROM node:20.11.1-alpine AS runner
 
-# Set production environment (must be lowercase)
+# Set production environment
 ENV NODE_ENV=production
 
 # Create non-root user for security hardening
@@ -39,19 +50,13 @@ WORKDIR /app
 # --chown avoids extra chown layer (image size optimization)
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
-
-# Optional: copy public assets if used
-# COPY --from=builder --chown=nextjs:nextjs /app/public ./public
+COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 
 # Switch to non-root user
 USER nextjs
 
 # Expose application port
 EXPOSE 3000
-
-# Healthcheck for Kubernetes / AKS readiness
-# HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-#   CMD wget -qO- http://localhost:3000/health || exit 1
 
 # Start Next.js standalone server
 # Exec form ensures proper signal handling

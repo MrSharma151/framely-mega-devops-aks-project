@@ -7,6 +7,17 @@ FROM node:20.11.1-alpine AS builder
 # Set working directory inside container
 WORKDIR /app
 
+# -----------------------------
+# Build-time arguments
+# These are injected by Jenkins / local docker build
+# -----------------------------
+ARG NEXT_PUBLIC_BASE_PATH=""
+ARG NEXT_PUBLIC_API_BASE_URL=""
+
+# Expose build-time env to Next.js
+ENV NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
 # Copy only dependency manifests first (better layer caching)
 COPY package.json package-lock.json ./
 
@@ -47,10 +58,6 @@ USER nextjs
 
 # Expose Next.js application port
 EXPOSE 3000
-
-# Healthcheck for Kubernetes / Docker monitoring
-# HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-#   CMD wget -qO- http://localhost:3000/health || exit 1
 
 # Start the Next.js server
 # Exec form ensures proper signal handling (SIGTERM/SIGINT)
