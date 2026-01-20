@@ -1,17 +1,3 @@
-# ======================================================================
-# Deployment: frontend-admin
-# Environment: stage (local KIND)
-#
-# Purpose:
-# - Deploy the Admin Frontend application
-# - Define container image, replicas, ports, and health checks
-#
-# IMPORTANT:
-# - Environment variables mirror docker-compose for local parity
-# - NEXT_PUBLIC_* variables are required for frontend runtime config
-# - Values will be updated when moving to Ingress / AKS
-# ======================================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,6 +10,7 @@ spec:
   selector:
     matchLabels:
       app: frontend-admin
+
   template:
     metadata:
       labels:
@@ -32,19 +19,18 @@ spec:
       containers:
         - name: frontend-admin
           image: framely/frontend-admin:latest
-          # Image tag is managed via Kustomize (GitOps)
+          # Image tag is updated via Kustomize (GitOps / Jenkins)
 
           ports:
-            - containerPort: 80
-              # NGINX serves frontend on port 80
+            - containerPort: 3000
+              # Matches docker-compose internal port (3000)
 
           env:
             # ------------------------------------------------------------
-            # Frontend Runtime Configuration (LOCAL KIND)
+            # Frontend Runtime Configuration (docker-compose parity)
             # ------------------------------------------------------------
-            # This MUST match docker-compose for correct API calls
             - name: NEXT_PUBLIC_API_BASE_URL
-              value: "http://localhost:8082/api/v1"
+              value: "http://localhost/api/v1"
 
           resources:
             requests:
@@ -54,16 +40,5 @@ spec:
               cpu: "250m"
               memory: "256Mi"
 
-          # livenessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: 80
-          #   initialDelaySeconds: 20
-          #   periodSeconds: 20
-
-          # readinessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: 80
-          #   initialDelaySeconds: 10
-          #   periodSeconds: 10
+          # Probes intentionally omitted
+          # Will be added once application behavior is stable

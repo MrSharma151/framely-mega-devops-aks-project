@@ -1,17 +1,3 @@
-# ======================================================================
-# Deployment: frontend-customer
-# Environment: stage (local KIND)
-#
-# Purpose:
-# - Deploy the Customer Frontend application
-# - Serve the customer-facing UI
-#
-# IMPORTANT:
-# - Runtime configuration mirrors docker-compose
-# - NEXT_PUBLIC_* variables are required for API communication
-# - Backend is accessed via localhost:8082 in local KIND
-# ======================================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,6 +10,7 @@ spec:
   selector:
     matchLabels:
       app: frontend-customer
+
   template:
     metadata:
       labels:
@@ -32,19 +19,18 @@ spec:
       containers:
         - name: frontend-customer
           image: framely/frontend-customer:latest
-          # Image tag is managed via Kustomize (GitOps)
+          # Image tag is managed via Kustomize (GitOps / Jenkins)
 
           ports:
-            - containerPort: 80
-              # Frontend container listens on port 80
+            - containerPort: 3000
+              # Matches docker-compose internal port
 
           env:
             # ------------------------------------------------------------
-            # Frontend Runtime Configuration (LOCAL KIND)
+            # Frontend Runtime Configuration (docker-compose parity)
             # ------------------------------------------------------------
-            # Must match backend port-forward configuration
             - name: NEXT_PUBLIC_API_BASE_URL
-              value: "http://localhost:8082/api/v1"
+              value: "http://localhost/api/v1"
 
           resources:
             requests:
@@ -54,16 +40,5 @@ spec:
               cpu: "250m"
               memory: "256Mi"
 
-          # livenessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: 80
-          #   initialDelaySeconds: 20
-          #   periodSeconds: 20
-
-          # readinessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: 80
-          #   initialDelaySeconds: 10
-          #   periodSeconds: 10
+          # Probes intentionally omitted
+          # Will be added in later stabilization phase

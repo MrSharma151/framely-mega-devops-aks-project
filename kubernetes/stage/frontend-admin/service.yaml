@@ -1,20 +1,8 @@
-# ======================================================================
-# Service: frontend-admin
-# Environment: stage
-#
-# Purpose:
-# - Expose the Admin Frontend internally within the cluster
-# - Acts as a stable endpoint for Ingress routing
-#
-# Notes:
-# - Service type is ClusterIP (internal access only)
-# ======================================================================
-
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend-admin
-  namespace: framely-stage          # Dedicated namespace for stage environment
+  namespace: framely-stage
   labels:
     app: frontend-admin
 spec:
@@ -23,5 +11,5 @@ spec:
     app: frontend-admin
   ports:
     - name: http
-      port: 80               # Service port
-      targetPort: 80         # Container port
+      port: 80
+      targetPort: 3000

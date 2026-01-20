@@ -1,28 +1,9 @@
-# ======================================================================
-# Kustomization: backend (stage)
-#
-# Purpose:
-# - Acts as the GitOps control file for the backend service
-# - Jenkins updates the Docker image tag here
-# - ArgoCD watches this file and applies changes automatically
-#
-# Why namespace is defined here?
-# - Ensures all referenced resources are deployed to the correct namespace
-# - Avoids relying on the default namespace
-# - Keeps manifests clean and environment-aware
-#
-# IMPORTANT:
-# - Do NOT hardcode image tags in deployment.yaml
-# - Image versioning is handled centrally here
-# ======================================================================
-
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# All backend resources will be deployed into this namespace
 namespace: framely-stage
 
 resources:
-- deployment.yaml
-- service.yaml
-
+  - deployment.yaml
+  - service.yaml
+  - secret.yaml

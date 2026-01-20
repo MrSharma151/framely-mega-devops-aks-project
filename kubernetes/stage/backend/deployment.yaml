@@ -1,16 +1,3 @@
-# ======================================================================
-# Deployment: backend
-# Environment: stage (local KIND)
-#
-# Purpose:
-# - Deploy Backend API
-# - Configuration mirrors docker-compose for parity
-#
-# IMPORTANT:
-# - Hardcoded values are ONLY for local KIND testing
-# - This will be replaced with secure configuration in Azure AKS
-# ======================================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,6 +10,7 @@ spec:
   selector:
     matchLabels:
       app: backend
+
   template:
     metadata:
       labels:
@@ -31,47 +19,48 @@ spec:
       containers:
         - name: backend
           image: framely/backend:latest
-          # Actual image name + tag is injected via Kustomize (GitOps)
+          # Image tag will be updated by Jenkins via Kustomize
 
           ports:
             - containerPort: 8080
 
           env:
             # ------------------------------------------------------------
-            # ASP.NET Core Configuration
+            # ASP.NET Core Configuration (docker-compose parity)
             # ------------------------------------------------------------
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
+
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
 
             # ------------------------------------------------------------
-            # Database Connection (EXACT docker-compose match)
+            # Database Connection (K8s DNS + Secret)
             # ------------------------------------------------------------
             - name: ConnectionStrings__DefaultConnection
-              value: "Server=sql-server,1433;Database=FramelyDb;User Id=sa;Password=Str0ngP@ssw0rd123;TrustServerCertificate=True;Encrypt=False;"
-
+              valueFrom:
+                secretKeyRef:
+                  name: backend-db-secret
+                  key: connection-string
 
             # ------------------------------------------------------------
-            # JWT Authentication Configuration (LOCAL KIND ONLY)
+            # JWT Configuration (STAGE ONLY)
             # ------------------------------------------------------------
-            # NOTE:
-            # - These values exist in appsettings.json inside the image
-            # - Explicitly provided here to avoid startup failure in Kubernetes
-            # - Will be replaced by secure secret management in AKS
             - name: JwtSettings__Secret
               value: "Framely_Super_Secret_JWT_Key_AtLeast_32_Characters_Long!!"
+
             - name: JwtSettings__Issuer
               value: "FramelyAPI"
+
             - name: JwtSettings__Audience
               value: "FramelyUsers"
 
             # ------------------------------------------------------------
-            # CORS / Frontend Origins (LOCAL DEVELOPMENT)
+            # CORS Configuration (LOCAL / STAGE)
             # ------------------------------------------------------------
-            # Frontends are accessed via localhost from the browser
             - name: FrontendOrigins__0
               value: "http://localhost:3000"
+
             - name: FrontendOrigins__1
               value: "http://localhost:3001"
 
@@ -82,17 +71,3 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
-
-          # livenessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 8080
-          #   initialDelaySeconds: 30
-          #   periodSeconds: 15
-
-          # readinessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 8080
-          #   initialDelaySeconds: 10
-          #   periodSeconds: 10
