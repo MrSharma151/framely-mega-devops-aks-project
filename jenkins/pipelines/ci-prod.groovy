@@ -7,13 +7,6 @@
  - CI/CD pipeline for the 'prod' branch
  - Builds, tests, scans, and pushes production images
  - Updates GitOps repository ONLY after manual approval
-
- KEY PRINCIPLES:
- - Scripted pipeline (loaded from root Jenkinsfile)
- - Jenkins NEVER deploys to Kubernetes
- - Jenkins ONLY updates Git (GitOps)
- - Production rollout is approval-controlled
- - ArgoCD sync is manually triggered in PROD
 ========================================================================
 */
 
@@ -37,11 +30,30 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     env.REPOSITORY_PREFIX       = registry.repositoryPrefix
     env.REGISTRY_CREDENTIALS_ID = registry.credentialsId
 
+    // --------------------------------------------------
+    // Resolve environment-specific frontend build values
+    // --------------------------------------------------
+    // NOTE:
+    // Injected here to keep apps.yaml environment-agnostic.
+    // Update the URL when PROD ingress/domain is finalized.
+    def PROD_API_BASE_URL = "https://api.framely.in/api/v1"
+
+    APPS_CONFIG.apps.each { app ->
+        if (app.type == 'frontend' && app.buildArgs) {
+            app.buildArgs.each { key, value ->
+                if (value == "__API_BASE_URL__") {
+                    app.buildArgs[key] = PROD_API_BASE_URL
+                }
+            }
+        }
+    }
+
     echo "=================================================="
     echo " PROD PIPELINE :: CONTROLLED CI + GITOPS DELIVERY"
     echo " Environment        : ${ENVIRONMENT}"
     echo " Registry URL       : ${env.REGISTRY_URL}"
     echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
+    echo " Frontend API URL   : ${PROD_API_BASE_URL}"
     echo " Responsibilities:"
     echo " - Run tests"
     echo " - Run security scans"
@@ -56,11 +68,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     def dockerLib   = load('jenkins/shared/docker.groovy')
     def gitopsLib   = load('jenkins/shared/gitops.groovy')
 
-    /*
-    ================================================================
-    Run Tests
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Run Tests
+    // --------------------------------------------------
     stage('Run Tests') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
@@ -71,11 +81,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         }
     }
 
-    /*
-    ================================================================
-    Security & Quality Scans
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Security & Quality Scans
+    // --------------------------------------------------
     stage('Security & Quality Scans') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
@@ -86,11 +94,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         }
     }
 
-    /*
-    ================================================================
-    Docker Build & Push (Production Images)
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Docker Build & Push (Production Images)
+    // --------------------------------------------------
     stage('Docker Build & Push') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
@@ -106,11 +112,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         }
     }
 
-    /*
-    ================================================================
-    Manual Approval Gate (Production Release)
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Manual Approval Gate
+    // --------------------------------------------------
     stage('Manual Approval') {
         input message: """
 🚨 PRODUCTION RELEASE APPROVAL REQUIRED 🚨
@@ -121,20 +125,13 @@ This action will:
 - Change production image versions
 - Allow ArgoCD to deploy to the PROD AKS cluster
 
-Please confirm that:
-✔ Tests and scans have passed
-✔ Images are verified
-✔ Change is approved
-
-Do you want to proceed?
+Proceed only after verification and approval.
 """
     }
 
-    /*
-    ================================================================
-    GitOps Update (Prod)
-    ================================================================
-    */
+    // --------------------------------------------------
+    // GitOps Update (Prod)
+    // --------------------------------------------------
     stage('GitOps Update (Prod)') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"

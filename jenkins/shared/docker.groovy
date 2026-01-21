@@ -7,11 +7,6 @@
  - Build Docker images using locked Dockerfiles
  - Optionally push images to a container registry
  - Support Docker Hub now and Azure ACR in future
-
- DESIGN PRINCIPLES:
- - Registry configuration is resolved from registries.yaml
- - Image naming is resolved from images.yaml
- - Jenkins handles authentication (not Dockerfiles)
 ========================================================================
 */
 
@@ -49,15 +44,15 @@ def build(app, imagesConfig, pushImage = false) {
         def imageTag = "${appVersion}-${gitSha}"
 
         // --------------------------------------------------
-        // Resolve registry details (Docker Hub for now)
-        // NOTE: registry info is injected via environment
+        // Resolve registry details (ONLY REQUIRED WHEN PUSHING)
         // --------------------------------------------------
         def registryUrl      = env.REGISTRY_URL
         def repositoryPrefix = env.REPOSITORY_PREFIX
         def credentialsId    = env.REGISTRY_CREDENTIALS_ID
 
-        if (!registryUrl || !repositoryPrefix || !credentialsId) {
-            error """
+        if (pushImage) {
+            if (!registryUrl || !repositoryPrefix || !credentialsId) {
+                error """
 ❌ Registry configuration not found in environment.
 
 Ensure Jenkins pipeline exports:
@@ -65,9 +60,13 @@ Ensure Jenkins pipeline exports:
 - REPOSITORY_PREFIX
 - REGISTRY_CREDENTIALS_ID
 """
+            }
         }
 
-        def fullImageName = "${registryUrl}/${repositoryPrefix}/${imageName}:${imageTag}"
+        // Build full image name
+        def fullImageName = pushImage
+            ? "${registryUrl}/${repositoryPrefix}/${imageName}:${imageTag}"
+            : "${imageName}:${imageTag}"
 
         // --------------------------------------------------
         // Build arguments (frontend only)
@@ -78,12 +77,9 @@ Ensure Jenkins pipeline exports:
             echo "Injecting frontend build-time arguments"
 
             app.buildArgs.each { key, value ->
-
-                // Placeholder replacement handled by pipeline
                 if (value.startsWith("__")) {
                     error "❌ Unresolved build argument placeholder: ${key}=${value}"
                 }
-
                 buildArgs += "--build-arg ${key}=${value} "
             }
         }
@@ -118,7 +114,6 @@ Ensure Jenkins pipeline exports:
                         """
 
                         sh "docker push ${fullImageName}"
-
                         sh "docker logout ${registryUrl}"
                     }
 
