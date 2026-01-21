@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: framely-stage
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      # ------------------------------------------------------------
+      # INIT CONTAINER: Wait for SQL Server
+      # ------------------------------------------------------------
+      initContainers:
+        - name: wait-for-sql
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for SQL Server to be ready..."
+              until nc -z sql-server 1433; do
+                echo "SQL Server not reachable yet. Retrying in 5s..."
+                sleep 5
+              done
+              echo "SQL Server is reachable. Starting backend..."
+
+      # ------------------------------------------------------------
+      # BACKEND CONTAINER
+      # ------------------------------------------------------------
+      containers:
+        - name: backend
+          image: framely/backend:latest
+          # Image tag will be updated by Jenkins via Kustomize
+
+          ports:
+            - containerPort: 8080
+
+          env:
+            # ------------------------------------------------------------
+            # ASP.NET Core Configuration (docker-compose parity)
+            # ------------------------------------------------------------
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
+
+            # ------------------------------------------------------------
+            # Database Connection (K8s DNS + Secret)
+            # ------------------------------------------------------------
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: backend-db-secret
+                  key: connection-string
+
+            # ------------------------------------------------------------
+            # JWT Configuration (STAGE ONLY)
+            # ------------------------------------------------------------
+            - name: JwtSettings__Secret
+              value: "Framely_Super_Secret_JWT_Key_AtLeast_32_Characters_Long!!"
+
+            - name: JwtSettings__Issuer
+              value: "FramelyAPI"
+
+            - name: JwtSettings__Audience
+              value: "FramelyUsers"
+
+            # ------------------------------------------------------------
+            # CORS Configuration (LOCAL / STAGE)
+            # ------------------------------------------------------------
+            - name: FrontendOrigins__0
+              value: "http://localhost:3000"
+
+            - name: FrontendOrigins__1
+              value: "http://localhost:3001"
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

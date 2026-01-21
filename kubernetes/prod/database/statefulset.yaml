@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sql-server
+  namespace: framely-stage
+  labels:
+    app: sql-server
+spec:
+  serviceName: sql-server
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql-server
+
+  template:
+    metadata:
+      labels:
+        app: sql-server
+    spec:
+      containers:
+        - name: sql-server
+          image: mcr.microsoft.com/mssql/server:2022-latest
+
+          ports:
+            - containerPort: 1433
+
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+
+            - name: MSSQL_PID
+              value: "Developer"
+
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-server-secret
+                  key: SA_PASSWORD
+
+          volumeMounts:
+            - name: sql-data
+              mountPath: /var/opt/mssql
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+
+  volumeClaimTemplates:
+    - metadata:
+        name: sql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

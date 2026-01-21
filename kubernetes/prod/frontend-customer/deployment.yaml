@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-customer
+  namespace: framely-stage
+  labels:
+    app: frontend-customer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-customer
+
+  template:
+    metadata:
+      labels:
+        app: frontend-customer
+    spec:
+      containers:
+        - name: frontend-customer
+          image: framely/frontend-customer:latest
+          # Image tag is managed via Kustomize (GitOps / Jenkins)
+
+          ports:
+            - containerPort: 3000
+              # Matches docker-compose internal port
+
+          env:
+            # ------------------------------------------------------------
+            # Frontend Runtime Configuration (docker-compose parity)
+            # ------------------------------------------------------------
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://localhost/api/v1"
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+
+          # Probes intentionally omitted
+          # Will be added in later stabilization phase

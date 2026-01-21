@@ -4,16 +4,7 @@
 
 # 📘 Jenkins CI/CD Setup – Framely Mega DevOps AKS Project
 
-This document describes the **Jenkins CI/CD architecture**, **directory structure**, **pipeline strategy**, and **required setup** for the **Framely Mega DevOps AKS Project**.
-
-It covers:
-
-* Jenkins directory layout
-* CI and GitOps pipeline design
-* Required tools and plugins
-* Credentials management (GitHub, Docker Hub → Azure ACR later)
-* Multibranch Pipeline job configuration
-* Local Jenkins vs Azure VM–based Jenkins
+**(FINAL – Single Source of Truth)**
 
 ---
 
@@ -42,13 +33,13 @@ In the Framely platform, Jenkins is used **strictly for CI and GitOps orchestrat
 
 ## 📂 Jenkins Directory Structure
 
-```
+```text
 jenkins/
-├── README.md                # This documentation
+├── README.md                # This documentation (single source of truth)
 │
 ├── config/                  # Declarative pipeline configuration
-│   ├── apps.yaml            # App definitions, paths, tests & scan commands
-│   ├── images.yaml          # Logical Docker image naming
+│   ├── apps.yaml            # Application contracts & capabilities
+│   ├── images.yaml          # Logical Docker image names
 │   └── registries.yaml      # Registry configuration per environment
 │
 ├── pipelines/               # Branch-specific pipeline logic
@@ -65,7 +56,8 @@ jenkins/
 ```
 
 > 🧹 **Note**
-> Unused helper libraries have been intentionally removed to keep the CI codebase minimal, explicit, and maintainable.
+> Only actively used shared libraries are kept.
+> This keeps the CI codebase minimal, explicit, and interview-explainable.
 
 ---
 
@@ -76,8 +68,12 @@ The **`Jenkinsfile` resides at the repository root** and acts as the **single en
 ### Responsibilities
 
 * Validate branch context
-* Prevent GitOps-triggered CI loops
-* Load configuration files (`apps.yaml`, `images.yaml`, `registries.yaml`)
+* Prevent GitOps-triggered CI loops (`[skip ci]`)
+* Load configuration files:
+
+  * `apps.yaml`
+  * `images.yaml`
+  * `registries.yaml`
 * Route execution to the correct pipeline based on branch
 
 ### Branch → Pipeline Mapping
@@ -94,6 +90,8 @@ The **`Jenkinsfile` resides at the repository root** and acts as the **single en
 
 ### 1️⃣ `ci-main` — Validation Only
 
+Purpose: **Fast feedback without side effects**
+
 * Run tests
 * Run security scans (report-only)
 * Build Docker images (verification only)
@@ -101,40 +99,127 @@ The **`Jenkinsfile` resides at the repository root** and acts as the **single en
 ❌ No image push
 ❌ No GitOps updates
 
-> Designed for fast feedback and safe integration checks.
-
 ---
 
 ### 2️⃣ `ci-stage` — Continuous Deployment via GitOps
+
+Purpose: **Pre-production automation**
 
 * Run tests
 * Enforce security and quality scans
 * Build and push Docker images
 * Update GitOps manifests (image tags only)
-* ArgoCD **automatically syncs** to the STAGE environment
-
-✅ Fully automated
-✅ No manual intervention
+* ArgoCD **automatically syncs** to STAGE
 
 ---
 
 ### 3️⃣ `ci-prod` — Controlled Production Release
 
+Purpose: **Safe, audited releases**
+
 * Same steps as `ci-stage`
 * Manual approval gate **before GitOps update**
 * ArgoCD synchronization is **manual in PROD**
 
-✅ Production-safe
-✅ Change-controlled deployment
+---
+
+## 🌐 Frontend Build-Time Environment Handling (CRITICAL)
+
+### Background
+
+Both frontend applications (Customer & Admin) are **Next.js** apps.
+
+* They rely on **build-time environment variables**
+* All `NEXT_PUBLIC_*` variables are baked into the Docker image
+* Any environment change **requires a new image build**
+
+---
+
+### apps.yaml Contract (Environment-Agnostic)
+
+In `apps.yaml`, frontend apps define placeholders:
+
+```yaml
+buildArgs:
+  NEXT_PUBLIC_API_BASE_URL: __API_BASE_URL__
+```
+
+**Important rules:**
+
+* `apps.yaml` defines **what variables are required**
+* It does **NOT** define environment-specific values
+* This avoids config drift and branching complexity
+
+---
+
+### Environment Resolution in Pipelines
+
+Environment-specific values are injected in pipelines:
+
+| Pipeline   | Resolution Strategy                               |
+| ---------- | ------------------------------------------------- |
+| `ci-main`  | Placeholders allowed (verification only)          |
+| `ci-stage` | `__API_BASE_URL__` resolved to stage API URL      |
+| `ci-prod`  | `__API_BASE_URL__` resolved to production API URL |
+
+This ensures:
+
+* Clean, immutable app definitions
+* Environment binding at CI/CD layer
+* Safe AKS migration later
+
+> **Design Principle**
+> 👉 *apps.yaml defines contracts, pipelines bind environments*
+
+---
+
+## 🐳 Docker Image Metadata Contract (IMPORTANT)
+
+The CI system enforces a strict separation:
+
+```text
+Image Name → docker.io/mrsharma151/framely-backend
+Image Tag  → 0.1.0-<git-sha>
+```
+
+### Why this matters
+
+* Kustomize expects:
+
+  * `name` (without tag)
+  * `newTag` (tag only)
+* Prevents `tag:tag` duplication
+* Enables clean GitOps updates
+
+This contract is enforced in `docker.groovy`.
+
+---
+
+## 🔁 GitOps & Kustomize Image Updates
+
+Jenkins updates images using:
+
+```bash
+kustomize edit set image <image-name>=<image-name>:<tag>
+```
+
+### Rules
+
+* **LEFT side** must exactly match the image in `Deployment.yaml`
+* **RIGHT side** contains the updated tag
+* If names do not match → Kustomize appends (undesired)
+
+The current setup guarantees:
+
+* Images are **overwritten**, never appended
+* `kustomization.yaml` stays clean and stable
 
 ---
 
 ## 🧰 Required Global Tools (CRITICAL)
 
-> ⚠️ Jenkins runs as the **`jenkins` system user**
-> All tools must be available in the global `PATH`.
-
-### Mandatory Tools
+> Jenkins runs as the **`jenkins` system user**
+> All tools must be available globally via `PATH`
 
 | Tool               | Purpose                       |
 | ------------------ | ----------------------------- |
@@ -145,135 +230,37 @@ The **`Jenkinsfile` resides at the repository root** and acts as the **single en
 | Kustomize          | GitOps manifest updates       |
 | Helm               | Platform tooling (outside CI) |
 
-### Verify Jenkins User Access
+---
 
-```bash
-sudo -u jenkins docker ps
-sudo -u jenkins dotnet --version
-sudo -u jenkins node --version
-sudo -u jenkins npm --version
-sudo -u jenkins kustomize version
-```
+## 🔐 Credentials Summary
+
+| Credential        | Purpose                     |
+| ----------------- | --------------------------- |
+| `github-pat`      | Checkout + GitOps commits   |
+| `dockerhub-creds` | Docker image push (current) |
+| `acr-*`           | Future AKS migration        |
 
 ---
 
-## 🔌 Required Jenkins Plugins
+## ☁️ Local → AKS Migration Safety
 
-### Core Pipeline
+| Aspect     | Local      | AKS       |
+| ---------- | ---------- | --------- |
+| Jenkins    | Local      | Azure VM  |
+| Registry   | Docker Hub | Azure ACR |
+| Kubernetes | KIND       | AKS       |
+| GitOps     | Same       | Same      |
+| Pipelines  | Same       | Same      |
 
-* Pipeline
-* Pipeline: Groovy
-* Pipeline: Multibranch
-* Pipeline Utility Steps (`readYaml`)
-* Workspace Cleanup
-
-### SCM & GitHub
-
-* Git
-* GitHub Branch Source
-* GitHub API Plugin
-
-### UX & Logging
-
-* ANSI Color
-* Timestamper
-
-### Credentials
-
-* Credentials
-* Credentials Binding
+👉 **Only infrastructure changes — CI/CD logic remains untouched.**
 
 ---
 
-## 🔐 Jenkins Credentials Configuration
-
-### 1️⃣ GitHub Personal Access Token (PAT)
-
-Used for:
-
-* Repository checkout
-* GitOps commits and pushes
-
-**Credential ID**
-
-```
-github-pat
-```
-
-Required scopes:
-
-* `repo`
-* `workflow`
-
----
-
-### 2️⃣ Docker Hub Credentials (Current)
-
-Used for:
-
-* Pushing Docker images during local and stage pipelines
-
-**Credential ID**
-
-```
-dockerhub-creds
-```
-
----
-
-### 🔁 Future Migration: Azure Container Registry (ACR)
-
-* Docker Hub will be replaced by **Azure ACR**
-* Jenkins will run on an **Azure VM**
-* **Only `registries.yaml` will change**
-* Pipelines and shared libraries remain unchanged
-
----
-
-## 🌿 Multibranch Pipeline Job Configuration
-
-Create a **Multibranch Pipeline Job** in Jenkins.
-
-### Steps
-
-1. New Item → Multibranch Pipeline
-2. Configure the GitHub repository
-3. Select credentials (`github-pat`)
-4. Script Path: `Jenkinsfile`
-5. Enable branch discovery
-6. Disable periodic scans (local setup)
-
-> With GitHub webhooks enabled, builds trigger only on real code changes.
-
----
-
-## 🔁 GitOps Infinite Loop Prevention
-
-* GitOps commits include `[skip ci]`
-* Jenkins ignores CI execution for GitOps-only commits
-* Prevents self-triggered build loops
-
----
-
-## ☁️ Local Jenkins vs Azure Jenkins (AKS)
-
-| Aspect     | Local Setup | Azure Setup |
-| ---------- | ----------- | ----------- |
-| Jenkins    | Local host  | Azure VM    |
-| Registry   | Docker Hub  | Azure ACR   |
-| Kubernetes | KIND        | AKS         |
-| GitOps     | Same        | Same        |
-| Pipelines  | Same        | Same        |
-
-👉 **Only infrastructure changes — the CI/CD design remains identical.**
-
----
-
-## ✅ Current Status
+## ✅ Final Status
 
 * Jenkins pipelines: ✅ Stable
-* GitOps workflow: ✅ Stable
-* ArgoCD integration: ✅ Stable
+* GitOps flow: ✅ Clean & deterministic
+* ArgoCD integration: ✅ Verified
 * AKS readiness: ✅ Complete
 
 ---
@@ -284,7 +271,14 @@ Create a **Multibranch Pipeline Job** in Jenkins.
 * Pipelines are **configuration-driven**
 * Git is the **single source of truth**
 * ArgoCD is the **only deployment engine**
-
-This Jenkins setup reflects **real-world, production-grade DevOps practices**.
+* Environment binding happens **at pipeline level**
 
 ---
+
+### 🏁 Final Note
+
+This Jenkins setup mirrors **real-world, production-grade DevOps systems** and is **fully-understandable** end-to-end.
+
+---
+
+
