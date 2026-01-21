@@ -34,10 +34,10 @@ resources:
 images:
 - name: docker.io/mrsharma151/framely-backend
   newName: docker.io/mrsharma151/framely-backend
-  newTag: 0.1.0-241e50c:0.1.0-241e50c
+  newTag: 0.1.0-241e50c
 - name: docker.io/mrsharma151/framely-frontend-admin
   newName: docker.io/mrsharma151/framely-frontend-admin
-  newTag: 0.1.0-241e50c:0.1.0-241e50c
+  newTag: 0.1.0-241e50c
 - name: docker.io/mrsharma151/framely-frontend-customer
   newName: docker.io/mrsharma151/framely-frontend-customer
-  newTag: 0.1.0-241e50c:0.1.0-241e50c
+  newTag: 0.1.0-241e50c
