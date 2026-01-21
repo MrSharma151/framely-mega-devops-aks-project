@@ -137,13 +137,21 @@ Please review the logs above to identify the root cause.
 
         // --------------------------------------------------
         // Expose built image details to downstream steps
+        // IMPORTANT:
+        // - name MUST NOT contain tag
+        // - tag is stored separately for GitOps (Kustomize)
         // --------------------------------------------------
+        def imageWithoutTag = pushImage
+            ? "${registryUrl}/${repositoryPrefix}/${imageName}"
+            : "${imageName}"
+
         app.builtImage = [
-            name: fullImageName,
+            name: imageWithoutTag,
             tag : imageTag
         ]
 
-        echo "✅ Image ready: ${fullImageName}"
+        echo "✅ Image ready: ${imageWithoutTag}:${imageTag}"
+
     }
 }
 
