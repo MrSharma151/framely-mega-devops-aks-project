@@ -7,6 +7,10 @@
  - CI/CD pipeline for the 'stage' branch
  - Builds, tests, scans, pushes images
  - Updates GitOps repository (image tags only)
+
+ SECURITY POLICY (STAGE):
+ - Trivy scan is REPORT-ONLY
+ - Vulnerabilities are visible but NOT blocking
 ========================================================================
 */
 
@@ -34,8 +38,8 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     // Resolve environment-specific frontend build values
     // --------------------------------------------------
     // NOTE:
-    // These values are intentionally injected here to keep
-    // apps.yaml environment-agnostic and AKS-ready.
+    // apps.yaml remains environment-agnostic.
+    // Environment binding happens here by design.
     def STAGE_API_BASE_URL = "http://localhost:8081/api/v1"
 
     APPS_CONFIG.apps.each { app ->
@@ -54,10 +58,12 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     echo " Registry URL       : ${env.REGISTRY_URL}"
     echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
     echo " Frontend API URL   : ${STAGE_API_BASE_URL}"
+    echo " Security Policy    : Trivy REPORT-ONLY"
     echo " Responsibilities:"
     echo " - Run tests"
     echo " - Run security scans"
     echo " - Build & push Docker images"
+    echo " - Run Trivy image scan (non-blocking)"
     echo " - Update GitOps image tags"
     echo "=================================================="
 
@@ -66,6 +72,7 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     def securityLib = load('jenkins/shared/security.groovy')
     def dockerLib   = load('jenkins/shared/docker.groovy')
     def gitopsLib   = load('jenkins/shared/gitops.groovy')
+    def trivyLib    = load('jenkins/shared/trivy.groovy')
 
     // --------------------------------------------------
     // Run Tests
@@ -81,7 +88,7 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     }
 
     // --------------------------------------------------
-    // Security & Quality Scans
+    // Security & Quality Scans (SCA)
     // --------------------------------------------------
     stage('Security & Quality Scans') {
         APPS_CONFIG.apps.each { app ->
@@ -108,6 +115,19 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
                 IMAGES_CONFIG,
                 true    // build + push
             )
+        }
+    }
+
+    // --------------------------------------------------
+    // Trivy Image Scan (REPORT ONLY)
+    // --------------------------------------------------
+    stage('Trivy Scan (Report Only)') {
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Running Trivy scan for application: ${app.name}"
+            echo "--------------------------------------------------"
+
+            trivyLib.scan(app, ENVIRONMENT)
         }
     }
 

@@ -18,19 +18,24 @@
 
 def run(APPS_CONFIG, IMAGES_CONFIG) {
 
+    // Explicit environment context
+    def ENVIRONMENT = 'main'
+
     echo "=================================================="
     echo " MAIN CI PIPELINE :: VALIDATION ONLY"
-    echo " Branch       : main"
+    echo " Branch       : ${ENVIRONMENT}"
     echo " Responsibilities:"
     echo " - Run tests"
     echo " - Run security scans"
     echo " - Verify Docker builds (NO PUSH)"
+    echo " - Run Trivy scan (REPORT ONLY)"
     echo "=================================================="
 
     // Load shared libraries once (performance + clarity)
     def testsLib    = load('jenkins/shared/tests.groovy')
     def securityLib = load('jenkins/shared/security.groovy')
     def dockerLib   = load('jenkins/shared/docker.groovy')
+    def trivyLib    = load('jenkins/shared/trivy.groovy')
 
     /*
     ================================================================
@@ -56,8 +61,8 @@ def run(APPS_CONFIG, IMAGES_CONFIG) {
     ================================================================
     Security & Quality Scans
     ------------------------------------------------
-    - Runs basic security and quality checks
-    - Helps catch vulnerable dependencies early
+    - Runs basic dependency-level scans
+    - Report-only in main branch
     ================================================================
     */
     stage('Security & Quality Scans') {
@@ -94,6 +99,27 @@ def run(APPS_CONFIG, IMAGES_CONFIG) {
                 IMAGES_CONFIG,
                 false   // false = build only, do NOT push
             )
+        }
+    }
+
+    /*
+    ================================================================
+    Trivy Image Scan (REPORT ONLY)
+    ------------------------------------------------
+    - Scans built images for vulnerabilities
+    - Does NOT fail the pipeline
+    - Provides early security visibility
+    ================================================================
+    */
+    stage('Trivy Scan (Report Only)') {
+        echo "Running Trivy scans in report-only mode"
+
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Running Trivy scan for application: ${app.name}"
+            echo "--------------------------------------------------"
+
+            trivyLib.scan(app, ENVIRONMENT)
         }
     }
 

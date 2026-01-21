@@ -7,6 +7,10 @@
  - CI/CD pipeline for the 'prod' branch
  - Builds, tests, scans, and pushes production images
  - Updates GitOps repository ONLY after manual approval
+
+ SECURITY POLICY (PROD):
+ - Trivy scan is ENFORCED
+ - Pipeline FAILS only on CRITICAL vulnerabilities
 ========================================================================
 */
 
@@ -34,8 +38,8 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     // Resolve environment-specific frontend build values
     // --------------------------------------------------
     // NOTE:
-    // Injected here to keep apps.yaml environment-agnostic.
-    // Update the URL when PROD ingress/domain is finalized.
+    // apps.yaml remains environment-agnostic.
+    // PROD URL should match real production ingress/domain.
     def PROD_API_BASE_URL = "https://api.framely.in/api/v1"
 
     APPS_CONFIG.apps.each { app ->
@@ -54,10 +58,12 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     echo " Registry URL       : ${env.REGISTRY_URL}"
     echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
     echo " Frontend API URL   : ${PROD_API_BASE_URL}"
+    echo " Security Policy    : Trivy FAILS on CRITICAL only"
     echo " Responsibilities:"
     echo " - Run tests"
     echo " - Run security scans"
     echo " - Build & push Docker images"
+    echo " - Run Trivy scan (ENFORCED)"
     echo " - WAIT for manual approval"
     echo " - Update GitOps image tags"
     echo "=================================================="
@@ -67,6 +73,7 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     def securityLib = load('jenkins/shared/security.groovy')
     def dockerLib   = load('jenkins/shared/docker.groovy')
     def gitopsLib   = load('jenkins/shared/gitops.groovy')
+    def trivyLib    = load('jenkins/shared/trivy.groovy')
 
     // --------------------------------------------------
     // Run Tests
@@ -82,7 +89,7 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     }
 
     // --------------------------------------------------
-    // Security & Quality Scans
+    // Security & Quality Scans (SCA)
     // --------------------------------------------------
     stage('Security & Quality Scans') {
         APPS_CONFIG.apps.each { app ->
@@ -113,6 +120,19 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     }
 
     // --------------------------------------------------
+    // Trivy Image Scan (STRICT)
+    // --------------------------------------------------
+    stage('Trivy Scan (CRITICAL Enforcement)') {
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Running Trivy scan for application: ${app.name}"
+            echo "--------------------------------------------------"
+
+            trivyLib.scan(app, ENVIRONMENT)
+        }
+    }
+
+    // --------------------------------------------------
     // Manual Approval Gate
     // --------------------------------------------------
     stage('Manual Approval') {
@@ -120,6 +140,8 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
 🚨 PRODUCTION RELEASE APPROVAL REQUIRED 🚨
 
 You are about to update the GitOps repository for PROD.
+
+Security checks have passed.
 
 This action will:
 - Change production image versions
