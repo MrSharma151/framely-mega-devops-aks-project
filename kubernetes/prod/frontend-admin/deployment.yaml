@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-admin
+  namespace: framely-stage
+  labels:
+    app: frontend-admin
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-admin
+
+  template:
+    metadata:
+      labels:
+        app: frontend-admin
+    spec:
+      containers:
+        - name: frontend-admin
+          image: framely/frontend-admin:latest
+          # Image tag is updated via Kustomize (GitOps / Jenkins)
+
+          ports:
+            - containerPort: 3000
+              # Matches docker-compose internal port (3000)
+
+          env:
+            # ------------------------------------------------------------
+            # Frontend Runtime Configuration (docker-compose parity)
+            # ------------------------------------------------------------
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://localhost/api/v1"
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+
+          # Probes intentionally omitted
+          # Will be added once application behavior is stable

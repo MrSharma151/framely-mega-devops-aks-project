@@ -1,0 +1,43 @@
+# ======================================================================
+# Root Kustomization for Stage Environment
+#
+# Purpose:
+# - Aggregate all stage-level Kubernetes resources
+# - Act as the single entry point for ArgoCD
+#
+# ArgoCD points to this directory:
+# - kubernetes/stage
+# - This file controls what gets deployed
+# ======================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ----------------------------------------------------------------------
+# Namespace definition
+# ----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
+# Application and service components
+# Each sub-directory has its own kustomization.yaml
+# ----------------------------------------------------------------------
+resources:
+- namespace.yaml
+- database
+- backend
+- frontend-admin
+- frontend-customer
+- ingress.yaml
+
+# image overrides for stage environment
+
+images:
+- name: docker.io/mrsharma151/framely-backend
+  newName: docker.io/mrsharma151/framely-backend
+  newTag: 0.1.0-a0b82c0
+- name: docker.io/mrsharma151/framely-frontend-admin
+  newName: docker.io/mrsharma151/framely-frontend-admin
+  newTag: 0.1.0-a0b82c0
+- name: docker.io/mrsharma151/framely-frontend-customer
+  newName: docker.io/mrsharma151/framely-frontend-customer
+  newTag: 0.1.0-a0b82c0
