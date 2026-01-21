@@ -2,61 +2,104 @@
 # ArgoCD Project: framely
 #
 # Purpose:
-# - Define a logical boundary for all Framely applications
-# - Restrict where applications can be deployed
-# - Restrict which Git repositories can be used
+# - Define a strict GitOps security boundary for all Framely applications
+# - Control which Git repositories ArgoCD can read from
+# - Control which namespaces and clusters applications can deploy to
 #
 # Why ArgoCD Project?
-# - Enforces security and governance
-# - Prevents accidental deployments to wrong namespaces
-# - Matches real-world enterprise GitOps practices
+# - Enforces governance and blast-radius control
+# - Prevents accidental deployments to unauthorized namespaces
+# - Mirrors real-world enterprise GitOps practices
 #
-# This project will be used by:
-# - Stage ArgoCD Application (local KIND testing)
-# - Future Production ArgoCD Application (AKS)
+# Environments Covered:
+# - Stage  (Local KIND / AKS Stage later)
+# - Prod   (AKS Production)
+#
+# IMPORTANT:
+# - This file is AKS-compatible as-is
+# - Future changes (if any) are OPTIONAL and COMMENTED
 # ======================================================================
 
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: framely
-  namespace: argocd                 # ArgoCD control-plane namespace
+  namespace: argocd   # ArgoCD control-plane namespace (DO NOT CHANGE)
 spec:
   description: Framely GitOps Project (Stage & Production)
 
   # --------------------------------------------------------------------
   # Source repositories allowed for this project
   # --------------------------------------------------------------------
+  # SECURITY:
+  # - Only explicitly allowed Git repositories can be used
+  # - Prevents unauthorized repos from deploying workloads
   sourceRepos:
-    - git@github.com:MrSharma151/framely-aks-mega-devops.git       # Allow this Git repository
-    
+    - git@github.com:MrSharma151/framely-aks-mega-devops.git
+
+    # FUTURE (OPTIONAL):
+    # If using HTTPS instead of SSH:
+    # - https://github.com/MrSharma151/framely-aks-mega-devops.git
+
+    # FUTURE (OPTIONAL):
+    # If splitting GitOps repo later:
+    # - git@github.com:org/framely-gitops.git
+
   # --------------------------------------------------------------------
   # Destinations where applications are allowed to deploy
   # --------------------------------------------------------------------
+  # NOTE:
+  # - Same destination structure works for KIND and AKS
+  # - Server remains kubernetes.default.svc for in-cluster ArgoCD
   destinations:
-    # Stage environment (local KIND / pre-prod)
+
+    # Stage environment
     - namespace: framely-stage
       server: https://kubernetes.default.svc
 
-    # Production environment (will be enabled later)
+    # Production environment
     - namespace: framely-prod
       server: https://kubernetes.default.svc
 
+    # FUTURE (OPTIONAL – Multi-cluster AKS):
+    # - namespace: framely-stage
+    #   server: https://<AKS-STAGE-API-SERVER>
+    #
+    # - namespace: framely-prod
+    #   server: https://<AKS-PROD-API-SERVER>
+
   # --------------------------------------------------------------------
-  # Kubernetes resource whitelisting
+  # Cluster-scoped resource permissions
   # --------------------------------------------------------------------
-  # Which cluster-scoped resources are allowed
+  # SECURITY:
+  # - Keep this MINIMAL
+  # - Only allow what is strictly necessary
   clusterResourceWhitelist:
     - group: ''
       kind: Namespace
 
-  # Which namespace-scoped resources are allowed
+    # FUTURE (OPTIONAL):
+    # If cluster-wide CRDs are required (rare):
+    # - group: apiextensions.k8s.io
+    #   kind: CustomResourceDefinition
+
+  # --------------------------------------------------------------------
+  # Namespace-scoped resource permissions
+  # --------------------------------------------------------------------
+  # This allows full control *within* approved namespaces only
   namespaceResourceWhitelist:
     - group: '*'
       kind: '*'
 
   # --------------------------------------------------------------------
-  # Optional: Orphaned resource cleanup settings
+  # Orphaned resource handling
   # --------------------------------------------------------------------
+  # Warn if resources exist in cluster but not in Git
   orphanedResources:
     warn: true
+
+    # FUTURE (OPTIONAL – VERY DANGEROUS):
+    # Enable only if you fully trust Git as source of truth
+    # and want automatic cleanup.
+    #
+    # prune: true

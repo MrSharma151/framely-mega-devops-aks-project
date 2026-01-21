@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-admin
-  namespace: framely-stage
+  namespace: framely-prod
   labels:
     app: frontend-admin
 spec:
@@ -19,19 +19,53 @@ spec:
       containers:
         - name: frontend-admin
           image: framely/frontend-admin:latest
-          # Image tag is updated via Kustomize (GitOps / Jenkins)
+          # Image tag is updated via Kustomize (GitOps / Jenkins prod branch)
 
           ports:
             - containerPort: 3000
-              # Matches docker-compose internal port (3000)
 
+          # ------------------------------------------------------------
+          # SECURITY CONTEXT (stateless frontend, production-safe)
+          # ------------------------------------------------------------
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # ------------------------------------------------------------
+          # Frontend Configuration
+          # IMPORTANT:
+          # NEXT_PUBLIC_* vars are BUILD-TIME ONLY.
+          # Real prod API base URL is injected during CI image build.
+          # This placeholder exists only for documentation clarity.
+          # ------------------------------------------------------------
           env:
-            # ------------------------------------------------------------
-            # Frontend Runtime Configuration (docker-compose parity)
-            # ------------------------------------------------------------
             - name: NEXT_PUBLIC_API_BASE_URL
-              value: "http://localhost/api/v1"
+              value: "http://placeholder-not-used-at-runtime"
 
+          # ------------------------------------------------------------
+          # Probes (Next.js standalone – stable)
+          # ------------------------------------------------------------
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+          # ------------------------------------------------------------
+          # Resource Management (same as stage initially)
+          # ------------------------------------------------------------
           resources:
             requests:
               cpu: "50m"
@@ -39,6 +73,3 @@ spec:
             limits:
               cpu: "250m"
               memory: "256Mi"
-
-          # Probes intentionally omitted
-          # Will be added once application behavior is stable

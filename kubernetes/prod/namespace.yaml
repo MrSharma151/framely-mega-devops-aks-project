@@ -1,10 +1,10 @@
 # ======================================================================
-# Namespace: framely-stage
-# Environment: Stage (Local KIND / Pre-Prod)
+# Namespace: framely-prod
+# Environment: Production (AKS)
 #
 # Purpose:
 # - Provide logical and security isolation for all Framely applications
-# - Separate application workloads from system namespaces
+# - Separate production workloads from system namespaces
 #
 # Why a dedicated namespace?
 # - Avoid using the default namespace (bad practice)
@@ -12,15 +12,15 @@
 # - Match real-world enterprise Kubernetes standards
 #
 # Notes:
-# - All application Deployments, Services, Ingresses will use this namespace
-# - ArgoCD Application will target this namespace
-# - Same pattern will be reused for 'framely-prod' in AKS
+# - All production Deployments, Services, Ingresses use this namespace
+# - ArgoCD Application targets this namespace
+# - Mirrors framely-stage with prod-specific configuration
 # ======================================================================
 
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: framely-stage
+  name: framely-prod
   labels:
-    environment: stage
+    environment: prod
     project: framely

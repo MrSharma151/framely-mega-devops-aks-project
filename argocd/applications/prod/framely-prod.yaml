@@ -1,0 +1,77 @@
+# ======================================================================
+# ArgoCD Application: framely-prod
+#
+# Environment:
+# - Production (AKS – future)
+#
+# Purpose:
+# - Deploy Framely production workloads using GitOps
+# - Enforce controlled, approval-based production releases
+#
+# GitOps Model:
+# - Git is the single source of truth
+# - Jenkins updates Git (image tags only, after approval)
+# - ArgoCD deploys ONLY after manual sync
+#
+# IMPORTANT:
+# - Auto-sync is INTENTIONALLY DISABLED
+# - Production changes must be explicitly approved
+# ======================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: framely-prod
+  namespace: argocd   # ArgoCD control-plane namespace (DO NOT CHANGE)
+spec:
+  # --------------------------------------------------------------------
+  # ArgoCD Project (Security Boundary)
+  # --------------------------------------------------------------------
+  project: framely
+
+  # --------------------------------------------------------------------
+  # Source: Git repository containing Kubernetes manifests
+  # --------------------------------------------------------------------
+  source:
+    repoURL: git@github.com:MrSharma151/framely-aks-mega-devops.git
+    targetRevision: prod             # Track ONLY the 'prod' branch
+    path: kubernetes/prod            # Production GitOps manifests
+
+    # Kustomize handles environment-specific overrides
+    # Image tags are updated by Jenkins after manual approval
+    kustomize: {}
+
+    # FUTURE (OPTIONAL):
+    # If switching to HTTPS-based Git access:
+    # repoURL: https://github.com/MrSharma151/framely-aks-mega-devops.git
+
+  # --------------------------------------------------------------------
+  # Destination: Kubernetes cluster and namespace
+  # --------------------------------------------------------------------
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: framely-prod
+
+    # FUTURE (OPTIONAL – Multi-cluster AKS):
+    # server: https://<AKS-PROD-API-SERVER>
+
+  # --------------------------------------------------------------------
+  # Sync Policy: MANUAL (Production Safety)
+  # --------------------------------------------------------------------
+  # WHY MANUAL?
+  # - Prevent accidental production rollouts
+  # - Enforce human approval
+  # - Required for enterprise governance
+  syncPolicy:
+    # ❌ NO automated sync in production
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+
+      # FUTURE (OPTIONAL):
+      # - RespectIgnoreDifferences=true
+
+  # --------------------------------------------------------------------
+  # Application revision history retention
+  # --------------------------------------------------------------------
+  revisionHistoryLimit: 10

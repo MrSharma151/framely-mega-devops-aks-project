@@ -1,17 +1,44 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: framely-stage-ingress
-  namespace: framely-stage
+  name: framely-prod-ingress
+  namespace: framely-prod
   annotations:
+    # ------------------------------------------------------------
+    # Ingress Controller
+    # ------------------------------------------------------------
     kubernetes.io/ingress.class: nginx
+
+    # ------------------------------------------------------------
+    # Regex & Path Rewrites
+    # ------------------------------------------------------------
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+    # ------------------------------------------------------------
+    # AKS / NGINX Hardening (PROD SAFE DEFAULTS)
+    # ------------------------------------------------------------
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+
+    # ------------------------------------------------------------
+    # TLS / HTTPS NOTES (PROD)
+    # ------------------------------------------------------------
+    # TLS is intentionally not enforced here to keep the manifest
+    # cloud-agnostic and interview-friendly.
+    # In real AKS production:
+    # - TLS can be terminated via cert-manager
+    # - or via Azure Application Gateway / Front Door
+    # without changing app services or deployments.
 spec:
   rules:
-    - host: localhost
+    - host: app.framely.com
       http:
         paths:
+          # --------------------------------------------------------
+          # Backend API
+          # --------------------------------------------------------
           - path: /api(/|$)(.*)
             pathType: Prefix
             backend:
@@ -20,6 +47,9 @@ spec:
                 port:
                   number: 80
 
+          # --------------------------------------------------------
+          # Admin Frontend
+          # --------------------------------------------------------
           - path: /admin(/|$)(.*)
             pathType: Prefix
             backend:
@@ -28,6 +58,9 @@ spec:
                 port:
                   number: 80
 
+          # --------------------------------------------------------
+          # Customer Frontend
+          # --------------------------------------------------------
           - path: /app(/|$)(.*)
             pathType: Prefix
             backend:

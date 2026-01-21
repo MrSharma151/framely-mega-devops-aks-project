@@ -10,12 +10,12 @@
 
 ## 🎯 Role of Jenkins in Framely
 
-In the Framely platform, Jenkins is used **strictly for CI and GitOps orchestration**.
+In the Framely platform, Jenkins is used **strictly for CI and GitOps orchestration**, with **built-in DevSecOps controls**.
 
 ### ✅ Jenkins Responsibilities
 
 * Execute unit and integration tests
-* Run security and quality scans
+* Run application and container security scans
 * Build Docker images
 * Push images to a container registry
 * Update Kubernetes manifests **via GitOps commits**
@@ -24,7 +24,7 @@ In the Framely platform, Jenkins is used **strictly for CI and GitOps orchestrat
 
 * Deploy workloads to Kubernetes
 * Run `kubectl apply`
-* Trigger or control ArgoCD synchronization
+* Control or auto-trigger ArgoCD synchronization
 
 > **Golden Rule**
 > 👉 *Jenkins updates Git. ArgoCD applies Git.*
@@ -48,78 +48,144 @@ jenkins/
 │   ├── ci-prod.groovy       # CI + manual approval (production release)
 │   └── terraform.groovy     # Infrastructure pipeline (future)
 │
-└── shared/                  # Reusable pipeline building blocks
+└── shared/                  # Reusable CI/CD building blocks
     ├── tests.groovy         # Test execution logic
-    ├── security.groovy      # Security & quality scans
+    ├── security.groovy      # Dependency & code security scans
     ├── docker.groovy        # Docker build & push logic
+    ├── trivy.groovy         # Container image vulnerability scanning
     └── gitops.groovy        # GitOps image update logic
 ```
 
-> 🧹 **Note**
+> 🧹 **Design Choice**
 > Only actively used shared libraries are kept.
-> This keeps the CI codebase minimal, explicit, and interview-explainable.
+> This keeps the CI system **explicit, auditable, and devops-friendly**.
 
 ---
 
 ## 📄 Jenkinsfile (Repository Root)
 
-The **`Jenkinsfile` resides at the repository root** and acts as the **single entry point** for all Jenkins pipelines.
+The **`Jenkinsfile` at repository root** acts as the **single entry point** for all pipelines.
 
 ### Responsibilities
 
-* Validate branch context
+* Detect branch context (multibranch pipeline)
 * Prevent GitOps-triggered CI loops (`[skip ci]`)
 * Load configuration files:
 
   * `apps.yaml`
   * `images.yaml`
   * `registries.yaml`
-* Route execution to the correct pipeline based on branch
+* Route execution to the correct pipeline
 
 ### Branch → Pipeline Mapping
 
-| Branch  | Pipeline File     | Behavior                |
-| ------- | ----------------- | ----------------------- |
-| `main`  | `ci-main.groovy`  | CI validation only      |
-| `stage` | `ci-stage.groovy` | CI + GitOps (automatic) |
-| `prod`  | `ci-prod.groovy`  | CI + manual approval    |
+| Branch  | Pipeline File     | Purpose                         |
+| ------- | ----------------- | ------------------------------- |
+| `main`  | `ci-main.groovy`  | Validation & feedback           |
+| `stage` | `ci-stage.groovy` | Automated pre-production deploy |
+| `prod`  | `ci-prod.groovy`  | Controlled production release   |
 
 ---
 
-## 🧠 Pipeline Design Philosophy
+## 🧠 Pipeline Design Philosophy (DevSecOps-First)
 
-### 1️⃣ `ci-main` — Validation Only
+This Jenkins setup follows **shift-left security**, enforced progressively per environment.
 
-Purpose: **Fast feedback without side effects**
+---
 
-* Run tests
-* Run security scans (report-only)
-* Build Docker images (verification only)
+### 1️⃣ `ci-main` — Validation & Feedback Loop
+
+Purpose: **Fast feedback without blocking developers**
+
+**Stages**
+
+* Tests
+* Dependency security scans
+* Docker build verification
+* Trivy image scan (**report-only**)
+
+**Security Behavior**
+
+* Vulnerabilities are **reported**
+* Pipeline **does NOT fail**
+* Issues must be fixed before promotion
 
 ❌ No image push
 ❌ No GitOps updates
 
 ---
 
-### 2️⃣ `ci-stage` — Continuous Deployment via GitOps
+### 2️⃣ `ci-stage` — Secure Continuous Delivery
 
-Purpose: **Pre-production automation**
+Purpose: **Pre-production enforcement**
 
-* Run tests
-* Enforce security and quality scans
-* Build and push Docker images
-* Update GitOps manifests (image tags only)
-* ArgoCD **automatically syncs** to STAGE
+**Stages**
+
+* Tests
+* Dependency security scans
+* Docker build & push
+* Trivy image scan (**enforced**)
+* GitOps image update
+
+**Security Policy**
+
+* CRITICAL & HIGH vulnerabilities are **reported**
+* Pipeline **does NOT fail**
+* Acts as a security visibility gate
+
+ArgoCD **auto-syncs** changes to STAGE.
 
 ---
 
-### 3️⃣ `ci-prod` — Controlled Production Release
+### 3️⃣ `ci-prod` — Controlled & Audited Release
 
-Purpose: **Safe, audited releases**
+Purpose: **Production safety**
 
-* Same steps as `ci-stage`
-* Manual approval gate **before GitOps update**
-* ArgoCD synchronization is **manual in PROD**
+**Stages**
+
+* Tests
+* Security scans
+* Docker build & push
+* Trivy scan (**STRICT enforcement**)
+* Manual approval gate
+* GitOps image update
+
+**Security Policy**
+
+* ❌ Pipeline FAILS on **CRITICAL vulnerabilities**
+* HIGH vulnerabilities are allowed but visible
+* ArgoCD sync is **manual**
+
+> **DevSecOps Principle**
+> 👉 *Security is progressive, not binary.*
+
+---
+
+## 🔐 DevSecOps with Trivy (Container Security)
+
+### Why Trivy?
+
+* Lightweight & fast
+* No SaaS dependency
+* Industry-standard for container security
+* Perfect fit for GitOps + AKS
+
+### What is Scanned?
+
+* OS-level packages
+* Language dependencies
+* Known CVEs from upstream sources
+
+### Enforcement Matrix
+
+| Environment | Scan Mode     | Pipeline Fails On |
+| ----------- | ------------- | ----------------- |
+| `main`      | Report only   | ❌ Never           |
+| `stage`     | Enforced view | ❌ Never           |
+| `prod`      | Strict gate   | ✅ CRITICAL only   |
+
+> Jenkins **never fixes vulnerabilities** —
+> it **reports, enforces, and protects environments**.
 
 ---
 
@@ -127,118 +193,94 @@ Purpose: **Safe, audited releases**
 
 ### Background
 
-Both frontend applications (Customer & Admin) are **Next.js** apps.
+Both frontend apps are **Next.js** applications.
 
-* They rely on **build-time environment variables**
-* All `NEXT_PUBLIC_*` variables are baked into the Docker image
-* Any environment change **requires a new image build**
+* `NEXT_PUBLIC_*` variables are **baked at build time**
+* Environment changes require **new image builds**
 
 ---
 
 ### apps.yaml Contract (Environment-Agnostic)
-
-In `apps.yaml`, frontend apps define placeholders:
 
 ```yaml
 buildArgs:
   NEXT_PUBLIC_API_BASE_URL: __API_BASE_URL__
 ```
 
-**Important rules:**
+**Rules**
 
-* `apps.yaml` defines **what variables are required**
-* It does **NOT** define environment-specific values
-* This avoids config drift and branching complexity
+* `apps.yaml` defines **required variables**
+* It does **not** define environment values
+* Prevents config drift
 
 ---
 
-### Environment Resolution in Pipelines
+### Environment Binding in Pipelines
 
-Environment-specific values are injected in pipelines:
-
-| Pipeline   | Resolution Strategy                               |
-| ---------- | ------------------------------------------------- |
-| `ci-main`  | Placeholders allowed (verification only)          |
-| `ci-stage` | `__API_BASE_URL__` resolved to stage API URL      |
-| `ci-prod`  | `__API_BASE_URL__` resolved to production API URL |
-
-This ensures:
-
-* Clean, immutable app definitions
-* Environment binding at CI/CD layer
-* Safe AKS migration later
+| Pipeline   | Resolution                 |
+| ---------- | -------------------------- |
+| `ci-main`  | Placeholder allowed        |
+| `ci-stage` | Injects stage API URL      |
+| `ci-prod`  | Injects production API URL |
 
 > **Design Principle**
 > 👉 *apps.yaml defines contracts, pipelines bind environments*
 
 ---
 
-## 🐳 Docker Image Metadata Contract (IMPORTANT)
-
-The CI system enforces a strict separation:
+## 🐳 Docker Image Metadata Contract
 
 ```text
 Image Name → docker.io/mrsharma151/framely-backend
 Image Tag  → 0.1.0-<git-sha>
 ```
 
-### Why this matters
+**Why**
 
-* Kustomize expects:
-
-  * `name` (without tag)
-  * `newTag` (tag only)
-* Prevents `tag:tag` duplication
-* Enables clean GitOps updates
-
-This contract is enforced in `docker.groovy`.
+* Prevents tag duplication (`tag:tag`)
+* Ensures Kustomize correctness
+* Enables clean GitOps diffs
 
 ---
 
-## 🔁 GitOps & Kustomize Image Updates
+## 🔁 GitOps & Kustomize Safety
 
 Jenkins updates images using:
 
 ```bash
-kustomize edit set image <image-name>=<image-name>:<tag>
+kustomize edit set image <image>=<image>:<tag>
 ```
 
-### Rules
+Rules:
 
-* **LEFT side** must exactly match the image in `Deployment.yaml`
-* **RIGHT side** contains the updated tag
-* If names do not match → Kustomize appends (undesired)
-
-The current setup guarantees:
-
+* LEFT side must match Deployment image exactly
 * Images are **overwritten**, never appended
-* `kustomization.yaml` stays clean and stable
+* Prevents broken ArgoCD syncs
 
 ---
 
-## 🧰 Required Global Tools (CRITICAL)
+## 🧰 Required Global Tools
 
-> Jenkins runs as the **`jenkins` system user**
-> All tools must be available globally via `PATH`
+> Jenkins runs as **system user `jenkins`**
 
-| Tool               | Purpose                       |
-| ------------------ | ----------------------------- |
-| Docker             | Build and push images         |
-| Git                | Source control                |
-| .NET SDK 9.x       | Backend build and tests       |
-| Node.js 20.x + npm | Frontend build and tests      |
-| Kustomize          | GitOps manifest updates       |
-| Helm               | Platform tooling (outside CI) |
+| Tool               | Purpose                      |
+| ------------------ | ---------------------------- |
+| Docker             | Image build & push           |
+| Git                | SCM & GitOps                 |
+| .NET SDK 9.x       | Backend tests                |
+| Node.js 20.x + npm | Frontend builds              |
+| Trivy              | Container vulnerability scan |
+| Kustomize          | GitOps updates               |
 
 ---
 
 ## 🔐 Credentials Summary
 
-| Credential        | Purpose                     |
-| ----------------- | --------------------------- |
-| `github-pat`      | Checkout + GitOps commits   |
-| `dockerhub-creds` | Docker image push (current) |
-| `acr-*`           | Future AKS migration        |
+| Credential        | Usage                     |
+| ----------------- | ------------------------- |
+| `github-pat`      | Checkout & GitOps commits |
+| `dockerhub-creds` | Docker image push         |
+| `acr-*`           | Future AKS migration      |
 
 ---
 
@@ -252,33 +294,33 @@ The current setup guarantees:
 | GitOps     | Same       | Same      |
 | Pipelines  | Same       | Same      |
 
-👉 **Only infrastructure changes — CI/CD logic remains untouched.**
+👉 **Only infra changes — CI/CD logic stays identical**
 
 ---
 
 ## ✅ Final Status
 
-* Jenkins pipelines: ✅ Stable
-* GitOps flow: ✅ Clean & deterministic
-* ArgoCD integration: ✅ Verified
+* Multibranch CI/CD: ✅ Stable
+* DevSecOps enforcement: ✅ Progressive & correct
+* GitOps flow: ✅ Deterministic
 * AKS readiness: ✅ Complete
 
 ---
 
-## 💡 Key Takeaways
+## 💡 Final Takeaways 
 
 * Jenkins is **stateless**
-* Pipelines are **configuration-driven**
+* Pipelines are **config-driven**
+* Security is **shift-left & environment-aware**
 * Git is the **single source of truth**
 * ArgoCD is the **only deployment engine**
-* Environment binding happens **at pipeline level**
 
 ---
 
 ### 🏁 Final Note
 
-This Jenkins setup mirrors **real-world, production-grade DevOps systems** and is **fully-understandable** end-to-end.
+This Jenkins setup demonstrates **real-world DevSecOps maturity**, not toy pipelines.
+Every decision is **explainable, auditable, and production-aligned**.
 
 ---
-
 

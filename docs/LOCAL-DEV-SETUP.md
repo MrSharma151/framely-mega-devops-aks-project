@@ -1,90 +1,104 @@
 
+
 ---
 
-## 📘 Local Development Setup – Framely DevOps AKS Mega Project
+# 📘 Local Development Setup – Framely DevOps AKS Mega Project
 
-This document explains how to set up the **entire Framely platform locally** using **KIND (Kubernetes in Docker)** for end-to-end testing **before migrating to AKS**.
+**(FINAL – Single Source of Truth)**
+
+---
+
+## 🎯 Purpose of This Document
+
+This document explains how to set up the **entire Framely platform locally** using **KIND (Kubernetes in Docker)** to perform **end-to-end CI/CD + GitOps + DevSecOps validation** **before migrating to AKS**.
 
 It is intended for:
 
 * Local development & validation
-* CI/CD + GitOps testing
-* New contributors who want to run the project locally
+* Jenkins multibranch CI/CD testing
+* GitOps (ArgoCD + Kustomize) verification
+* DevSecOps validation (Trivy-based image scanning)
+* New contributors onboarding
 
 ---
 
 ## 🧠 Why Local Kubernetes First?
 
-Before provisioning Azure resources, we validate everything locally to ensure:
+Before provisioning Azure infrastructure, everything is validated locally to ensure:
 
 * Applications are container-ready
-* CI pipelines work end-to-end
-* GitOps (ArgoCD + Kustomize) behaves correctly
-* Zero cloud cost during development
+* Dockerfiles are secure & reproducible
+* Jenkins pipelines work end-to-end
+* GitOps updates behave deterministically
+* DevSecOps gates work as expected
+* **Zero cloud cost during development**
 
-Later, the same setup is migrated to **AKS** with minimal changes.
+Later, this setup is migrated to **AKS** with **minimal changes**.
+
+> 👉 *Local failures are cheap. Cloud failures are expensive.*
 
 ---
 
 ## 🧰 Prerequisites (One-Time Setup)
 
-Make sure the following tools are installed on your **WSL2 Ubuntu system / any Linux distro**.
+All tools must be installed on your **WSL2 Ubuntu / Linux system**.
 
-> ⚠️ **Important Note (Jenkins User)**
+> ⚠️ **CRITICAL: Jenkins User Constraint**
 >
 > Jenkins runs as a **separate system user (`jenkins`)**.
-> Any tool used inside pipelines **must be installed globally** and accessible to the Jenkins user via `PATH`.
+> Any tool used inside pipelines **must be installed globally** and accessible via `PATH` for the Jenkins user.
 
 ---
 
-### 🔹 Core Platform & DevOps Tools
+## 🔹 Core Platform & DevOps Tools
 
-| Tool       | Purpose                                    |
-| ---------- | ------------------------------------------ |
-| Docker     | Container runtime                          |
-| kubectl    | Kubernetes CLI                             |
-| kind       | Local Kubernetes cluster                   |
-| Helm       | Kubernetes package manager                 |
-| Jenkins    | CI server (runs locally, not in container) |
-| ArgoCD CLI | GitOps interaction                         |
-| Git        | Source control                             |
-
----
-
-### 🔹 GitOps & Manifest Management Tools (Mandatory)
-
-| Tool      | Purpose                                             | Requirement        |
-| --------- | --------------------------------------------------- | ------------------ |
-| Kustomize | Update Kubernetes manifests (image tags via GitOps) | **Global install** |
-
-> 🔑 **Why Kustomize is mandatory**
->
-> * Jenkins uses **`kustomize edit set image`**
-> * Image tags are updated **without touching YAML manually**
-> * Required for **stage & prod GitOps pipelines**
->
-> 👉 If Kustomize is missing or not accessible to Jenkins, **ci-stage pipeline will fail**.
+| Tool       | Purpose                                     |
+| ---------- | ------------------------------------------- |
+| Docker     | Container runtime                           |
+| kubectl    | Kubernetes CLI                              |
+| kind       | Local Kubernetes cluster                    |
+| Helm       | Kubernetes package manager                  |
+| Jenkins    | CI server (runs on host, not in Kubernetes) |
+| ArgoCD CLI | GitOps interaction                          |
+| Git        | Source control                              |
 
 ---
 
-### 🔹 Application Runtime & Build Tools (Mandatory for CI)
+## 🔹 CI / Build / Runtime Tooling (MANDATORY)
 
-These tools are **required by Jenkins pipelines** to run tests and build images.
+These tools are **directly used by Jenkins pipelines**.
 
-| Tool         | Purpose                                      | Requirement        |
-| ------------ | -------------------------------------------- | ------------------ |
-| .NET SDK 9.x | Build & test Backend (.NET API + Tests)      | **Global install** |
-| Node.js 20.x | Build & test Frontend applications (Next.js) | **Global install** |
-| npm          | Dependency management & test execution       | Comes with Node    |
-| Docker CLI   | Image build & push                           | **Global install** |
-
-> ✅ These tools **must be accessible to the Jenkins user**, not only the logged-in Linux user.
+| Tool         | Purpose                                            | Requirement        |
+| ------------ | -------------------------------------------------- | ------------------ |
+| Docker CLI   | Image build & push                                 | **Global install** |
+| .NET SDK 9.x | Backend build & tests                              | **Global install** |
+| Node.js 20.x | Frontend build & tests (Next.js)                   | **Global install** |
+| npm          | Frontend dependency & test execution               | Comes with Node    |
+| Kustomize    | GitOps image updates                               | **Global install** |
+| Trivy        | Container image vulnerability scanning (DevSecOps) | **Global install** |
 
 ---
 
-## 🔍 Verify Tool Installation
+## 🔐 Why Trivy Is Mandatory Now (DevSecOps)
 
-Run the following commands and ensure **no errors**:
+Trivy is used to scan **built Docker images** for vulnerabilities.
+
+**Role of Trivy in Framely pipelines:**
+
+* `main`  → report-only (developer feedback)
+* `stage` → enforced visibility (no failure)
+* `prod`  → **FAILS on CRITICAL vulnerabilities**
+
+> Jenkins **never fixes vulnerabilities**.
+> It **reports, enforces, and protects environments**.
+
+If Trivy is missing, **pipelines WILL FAIL**.
+
+---
+
+## 🔍 Verify Tool Installation (Host User)
+
+Run these commands as your normal Linux user:
 
 ```bash
 docker version
@@ -94,13 +108,18 @@ helm version
 git --version
 argocd version --client
 kustomize version
+trivy version
 
 dotnet --version
 node --version
 npm --version
 ```
 
-### 🔍 Verify Jenkins User Access (Critical)
+---
+
+## 🔍 Verify Jenkins User Access (CRITICAL)
+
+Run these exactly:
 
 ```bash
 sudo -u jenkins docker ps
@@ -108,9 +127,11 @@ sudo -u jenkins dotnet --version
 sudo -u jenkins node --version
 sudo -u jenkins npm --version
 sudo -u jenkins kustomize version
+sudo -u jenkins trivy version
 ```
 
-> ❌ If **any command fails here**, pipelines **WILL FAIL**.
+> ❌ If **any command fails here**, CI pipelines **WILL FAIL**
+> (especially `ci-stage` and `ci-prod`).
 
 ---
 
@@ -132,7 +153,7 @@ Verify:
 kind get clusters
 ```
 
-Expected:
+Expected output:
 
 ```
 (no output)
@@ -148,7 +169,7 @@ kubectl config delete-context kind-test
 
 ---
 
-## 🆕 Phase 2 – Create New KIND Cluster (`framely-dev`)
+## 🆕 Phase 2 – Create KIND Cluster (`framely-dev`)
 
 ### 2.1 Create KIND Configuration
 
@@ -168,19 +189,12 @@ nodes:
     extraPortMappings:
       - containerPort: 80
         hostPort: 80
-        protocol: TCP
       - containerPort: 443
         hostPort: 443
-        protocol: TCP
 
   - role: worker
-    image: kindest/node:v1.33.1
-
   - role: worker
-    image: kindest/node:v1.33.1
-
   - role: worker
-    image: kindest/node:v1.33.1
 ```
 
 Create cluster:
@@ -228,25 +242,26 @@ kubectl apply -n argocd \
 
 ## 🔗 Jenkins (Local)
 
-Jenkins runs **directly on the host machine**, not inside Kubernetes.
+Jenkins runs **directly on the host**, not inside Kubernetes.
 
 ```
 http://localhost:8000
 ```
 
-### Jenkins Responsibilities
+### Jenkins Responsibilities (Local)
 
 * Run unit & integration tests
 * Build Docker images
-* Push images to registry (Docker Hub / ACR)
-* Update Git repositories (GitOps via Kustomize)
+* Scan images using Trivy (DevSecOps)
+* Push images to Docker Hub
+* Update GitOps manifests using Kustomize
 
-> ❗ Jenkins **never deploys** to Kubernetes directly.
-> ArgoCD handles deployment.
+> ❗ Jenkins **never deploys** to Kubernetes
+> ArgoCD is the **only deployment engine**
 
 ---
 
-## 🧠 Architecture Alignment (Important)
+## 🧠 Architecture Alignment (Local → AKS)
 
 | Component  | Local (KIND)  | Cloud (AKS)      |
 | ---------- | ------------- | ---------------- |
@@ -255,31 +270,50 @@ http://localhost:8000
 | CI         | Local Jenkins | Azure VM Jenkins |
 | CD         | ArgoCD        | ArgoCD           |
 | GitOps     | Yes           | Yes              |
+| DevSecOps  | Trivy         | Trivy            |
 
-👉 **Only Kubernetes changes. Everything else stays the same.**
+👉 **Only infrastructure changes. CI/CD logic stays identical.**
 
 ---
 
-## ✅ Status
+## ✅ Current Local Validation Status
 
-* Local Kubernetes: ✅ Ready
+* KIND cluster: ✅ Ready
 * Jenkins: ✅ Ready
 * ArgoCD: ✅ Ready
-* Runtime Tooling (Dotnet / Node / Kustomize): ✅ Ready
-* CI Pipelines (`ci-main`): ✅ Stable
-* GitOps Flow (`ci-stage`): ✅ Stable
+* Docker builds: ✅ Stable
+* GitOps flow: ✅ Verified
+* Trivy scans: ✅ Integrated
+* CI pipelines:
+
+  * `ci-main`  → ✅ Green
+  * `ci-stage` → ✅ Green
+  * `ci-prod`  → ✅ Green (with security gates)
+* K8s manifets: ✅ Ready
 
 ---
 
-## 🔥 Final Note (Very Important)
+## 🔥 Final & Non-Negotiable Rule
 
-> Any machine that runs Jenkins (local VM or Azure VM later)
-> **must have Docker, Dotnet, Node.js, npm, and Kustomize installed globally**
-> otherwise **CI or GitOps pipelines will fail**.
+> Any machine running Jenkins
+> (local VM today, Azure VM tomorrow)
+> **MUST have Docker, Dotnet, Node.js, npm, Kustomize, and Trivy installed globally**
+>
+> Otherwise **CI / GitOps / DevSecOps pipelines WILL FAIL**.
 
 ---
 
-💡 **This document is the single source of truth for local testing, CI validation, and GitOps onboarding.**
+## 🏁 Final Statement
+
+This document is the **single source of truth** for:
+
+* Local Kubernetes setup
+* Jenkins CI/CD execution
+* GitOps validation
+* DevSecOps enforcement
+* AKS migration readiness
+
+It mirrors **real-world production DevOps systems**, not demos.
 
 ---
 

@@ -17,23 +17,6 @@ spec:
         app: backend
     spec:
       # ------------------------------------------------------------
-      # INIT CONTAINER: Wait for SQL Server
-      # ------------------------------------------------------------
-      initContainers:
-        - name: wait-for-sql
-          image: busybox:1.36
-          command:
-            - sh
-            - -c
-            - |
-              echo "Waiting for SQL Server to be ready..."
-              until nc -z sql-server 1433; do
-                echo "SQL Server not reachable yet. Retrying in 5s..."
-                sleep 5
-              done
-              echo "SQL Server is reachable. Starting backend..."
-
-      # ------------------------------------------------------------
       # BACKEND CONTAINER
       # ------------------------------------------------------------
       containers:
@@ -44,10 +27,21 @@ spec:
           ports:
             - containerPort: 8080
 
+          # ------------------------------------------------------------
+          # SECURITY CONTEXT (AKS-safe, matches Dockerfile)
+          # ------------------------------------------------------------
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # ------------------------------------------------------------
+          # ASP.NET Core Runtime Configuration
+          # ------------------------------------------------------------
           env:
-            # ------------------------------------------------------------
-            # ASP.NET Core Configuration (docker-compose parity)
-            # ------------------------------------------------------------
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
 
@@ -55,7 +49,7 @@ spec:
               value: "http://+:8080"
 
             # ------------------------------------------------------------
-            # Database Connection (K8s DNS + Secret)
+            # Database Connection (Azure SQL via Secret)
             # ------------------------------------------------------------
             - name: ConnectionStrings__DefaultConnection
               valueFrom:
@@ -64,10 +58,14 @@ spec:
                   key: connection-string
 
             # ------------------------------------------------------------
-            # JWT Configuration (STAGE ONLY)
+            # JWT Configuration
+            # NOTE: Secret MUST move to Kubernetes Secret (next step)
             # ------------------------------------------------------------
             - name: JwtSettings__Secret
-              value: "Framely_Super_Secret_JWT_Key_AtLeast_32_Characters_Long!!"
+              valueFrom:
+                secretKeyRef:
+                  name: backend-jwt-secret
+                  key: jwt-secret
 
             - name: JwtSettings__Issuer
               value: "FramelyAPI"
@@ -76,7 +74,8 @@ spec:
               value: "FramelyUsers"
 
             # ------------------------------------------------------------
-            # CORS Configuration (LOCAL / STAGE)
+            # CORS Configuration (Stage)
+            # NOTE: Replace localhost with stage ingress domain later
             # ------------------------------------------------------------
             - name: FrontendOrigins__0
               value: "http://localhost:3000"
@@ -84,6 +83,57 @@ spec:
             - name: FrontendOrigins__1
               value: "http://localhost:3001"
 
+            # ------------------------------------------------------------
+            # Azure Blob Storage (Secrets handled later)
+            # ------------------------------------------------------------
+            - name: Storage__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: backend-storage-secret
+                  key: connection-string
+
+            - name: Storage__Container
+              value: "uploads"
+
+            - name: Storage__Name
+              valueFrom:
+                secretKeyRef:
+                  name: backend-storage-secret
+                  key: account-name
+
+            - name: Storage__Key
+              valueFrom:
+                secretKeyRef:
+                  name: backend-storage-secret
+                  key: account-key
+
+          # ------------------------------------------------------------
+          # PROBES (AKS-friendly for ASP.NET Core)
+          # ------------------------------------------------------------
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+          # ------------------------------------------------------------
+          # RESOURCE MANAGEMENT (AKS realistic defaults)
+          # ------------------------------------------------------------
           resources:
             requests:
               cpu: "100m"

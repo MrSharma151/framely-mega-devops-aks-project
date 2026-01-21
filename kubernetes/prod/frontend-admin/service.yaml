@@ -2,14 +2,20 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend-admin
-  namespace: framely-stage
+  namespace: framely-prod
   labels:
     app: frontend-admin
 spec:
+  # ------------------------------------------------------------
+  # Internal service (Ingress exposes externally)
+  # ------------------------------------------------------------
   type: ClusterIP
+
   selector:
     app: frontend-admin
+
   ports:
     - name: http
       port: 80
       targetPort: 3000
+      protocol: TCP

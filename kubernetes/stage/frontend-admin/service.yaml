@@ -6,10 +6,16 @@ metadata:
   labels:
     app: frontend-admin
 spec:
+  # ------------------------------------------------------------
+  # Internal service (exposed via Ingress only)
+  # ------------------------------------------------------------
   type: ClusterIP
+
   selector:
     app: frontend-admin
+
   ports:
     - name: http
       port: 80
       targetPort: 3000
+      protocol: TCP

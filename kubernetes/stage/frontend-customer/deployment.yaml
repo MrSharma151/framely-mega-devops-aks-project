@@ -23,15 +23,49 @@ spec:
 
           ports:
             - containerPort: 3000
-              # Matches docker-compose internal port
 
+          # ------------------------------------------------------------
+          # SECURITY CONTEXT (stateless frontend, strict by default)
+          # ------------------------------------------------------------
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # ------------------------------------------------------------
+          # Frontend Configuration
+          # IMPORTANT:
+          # NEXT_PUBLIC_* variables are BUILD-TIME only.
+          # Real values are injected during CI image build.
+          # This entry exists for documentation clarity only.
+          # ------------------------------------------------------------
           env:
-            # ------------------------------------------------------------
-            # Frontend Runtime Configuration (docker-compose parity)
-            # ------------------------------------------------------------
             - name: NEXT_PUBLIC_API_BASE_URL
-              value: "http://localhost/api/v1"
+              value: "http://placeholder-not-used-at-runtime"
 
+          # ------------------------------------------------------------
+          # Probes (safe defaults for Next.js standalone)
+          # ------------------------------------------------------------
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+          # ------------------------------------------------------------
+          # Resource Management (frontend is lightweight)
+          # ------------------------------------------------------------
           resources:
             requests:
               cpu: "50m"
@@ -39,6 +73,3 @@ spec:
             limits:
               cpu: "250m"
               memory: "256Mi"
-
-          # Probes intentionally omitted
-          # Will be added in later stabilization phase

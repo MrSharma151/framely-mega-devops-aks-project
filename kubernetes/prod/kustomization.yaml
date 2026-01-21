@@ -1,43 +1,42 @@
 # ======================================================================
-# Root Kustomization for Stage Environment
+# Root Kustomization for Production Environment
 #
 # Purpose:
-# - Aggregate all stage-level Kubernetes resources
-# - Act as the single entry point for ArgoCD
+# - Aggregate all production-level Kubernetes resources
+# - Act as the single entry point for ArgoCD (prod application)
 #
-# ArgoCD points to this directory:
-# - kubernetes/stage
-# - This file controls what gets deployed
+# ArgoCD points to:
+# - kubernetes/prod
+# - This file fully defines the production environment
 # ======================================================================
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # ----------------------------------------------------------------------
-# Namespace definition
-# ----------------------------------------------------------------------
-
-# ----------------------------------------------------------------------
-# Application and service components
-# Each sub-directory has its own kustomization.yaml
+# Resources
 # ----------------------------------------------------------------------
 resources:
-- namespace.yaml
-- database
-- backend
-- frontend-admin
-- frontend-customer
-- ingress.yaml
+  - namespace.yaml
+  - backend
+  - frontend-admin
+  - frontend-customer
+  - ingress.yaml
 
-# image overrides for stage environment
-
+# ----------------------------------------------------------------------
+# Image overrides (PROD)
+# Jenkins updates ONLY the tag via GitOps
+# Manual approval happens before prod tag update
+# ----------------------------------------------------------------------
 images:
-- name: docker.io/mrsharma151/framely-backend
-  newName: docker.io/mrsharma151/framely-backend
-  newTag: 0.1.0-a0b82c0
-- name: docker.io/mrsharma151/framely-frontend-admin
-  newName: docker.io/mrsharma151/framely-frontend-admin
-  newTag: 0.1.0-a0b82c0
-- name: docker.io/mrsharma151/framely-frontend-customer
-  newName: docker.io/mrsharma151/framely-frontend-customer
-  newTag: 0.1.0-a0b82c0
+  - name: framely/backend
+    newName: mrsharma151/framely-backend
+    newTag: <jenkins-managed>
+
+  - name: framely/frontend-admin
+    newName: mrsharma151/framely-frontend-admin
+    newTag: <jenkins-managed>
+
+  - name: framely/frontend-customer
+    newName: mrsharma151/framely-frontend-customer
+    newTag: <jenkins-managed>

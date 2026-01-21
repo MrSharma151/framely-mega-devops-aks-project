@@ -2,198 +2,243 @@
 
 ---
 
-# Branching & CI/CD Workflow Strategy
+# 📘 Branching & CI/CD Workflow Strategy
 
-### Framely – Mega DevOps AKS Project
+## Framely – Mega DevOps AKS Project
+
+**(FINAL – Single Source of Truth)**
 
 ---
 
-## 1. Overview
+## 1️⃣ Overview
 
-This document defines the **branching model**, **CI/CD workflow**, and **GitOps execution strategy** used in the **Framely Mega DevOps AKS Project**.
+This document defines the **branching model**, **CI/CD workflow**, **GitOps execution**, and **DevSecOps enforcement strategy** used in the **Framely Mega DevOps AKS Project**.
 
-The primary objectives of this strategy are:
+This strategy is designed to:
 
-* Maintain **high code quality and safety**
-* Enable **fast feedback** in non-production environments
+* Maintain **high code quality and security**
+* Provide **fast feedback** during development
+* Enable **safe, automated pre-production deployments**
 * Ensure **controlled, auditable production releases**
-* Enforce a **clear separation of concerns** between CI and CD
+* Enforce **clear separation of concerns** between:
 
-This design follows industry-proven practices inspired by **GitLab Flow**, **Trunk-Based Development**, and **GitOps principles**.
+  * CI (Jenkins)
+  * CD (ArgoCD)
+  * Infrastructure (Terraform – future)
+
+The design is inspired by **GitLab Flow**, **Trunk-Based Development**, and **GitOps + DevSecOps best practices**.
 
 ---
 
-## 2. Branching Model
+## 2️⃣ Branching Model
 
-The project follows a **single-repository, multi-branch** strategy with **environment-aligned branches**.
+The project follows a **single-repository, multi-branch strategy** where **branches directly map to environments**.
 
-### Permanent Branches
+### Permanent Branches (Environment-Aligned)
 
-| Branch  | Purpose                                | Environment      |
-| ------- | -------------------------------------- | ---------------- |
-| `main`  | Source of truth (design & correctness) | None             |
-| `stage` | Integration & validation               | Stage / Pre-Prod |
-| `prod`  | Stable releases                        | Production       |
+| Branch  | Purpose                               | Environment |
+| ------- | ------------------------------------- | ----------- |
+| `main`  | Design correctness & system contracts | None        |
+| `stage` | Integration & validation              | Stage       |
+| `prod`  | Stable, customer-facing releases      | Production  |
+
+### Key Rules
 
 * Only these three branches are **long-lived**
-* All deployments originate from these branches
-* No direct environment manipulation outside Git
+* **All deployments originate from Git**
+* No direct Kubernetes or environment changes are allowed outside GitOps
+* Jenkins may commit **execution-only changes** to `stage` and `prod`
 
 ---
 
-## 3. High-Level Workflow
+## 3️⃣ High-Level Workflow
 
 ```
 Feature / Fix
       ↓
-main   (CI only – validation)
+main   → CI validation only
       ↓ Pull Request
-stage  (CI + auto deployment)
-      ↓ PR + Approval
-prod   (CI + manual delivery)
+stage  → CI + GitOps + auto deploy
+      ↓ Approval
+prod   → CI + GitOps + manual deploy
 ```
 
 ### Core Principle
 
 > **Design flows downward, execution flows forward**
 
-* Design and correctness originate in `main`
-* Execution happens progressively via `stage` and `prod`
-* Each environment increases in **control and stability**
+* `main` defines **what the system should be**
+* `stage` validates **how it behaves**
+* `prod` controls **when it is released**
 
 ---
 
-## 4. `main` Branch – Source of Truth
+## 4️⃣ `main` Branch – Source of Truth
 
 ### Purpose
 
-* Represents the **desired system state**
-* Contains clean, reviewed code and manifests
-* Must always remain **deployable and stable**
+* Represents the **desired system design**
+* Contains reviewed, clean, and secure code
+* Must always remain **buildable and trustworthy**
+
+---
 
 ### CI Behavior (Automated)
 
 * ✔ Unit & integration tests
-* ✔ Code quality checks (SAST)
-* ✔ Dependency and vulnerability scanning
+* ✔ Dependency & security scanning (SAST + Trivy – report only)
 * ✔ Docker image build (verification only)
 
-### What Does *Not* Happen
+---
 
-* ❌ No image push
+### What Does NOT Happen
+
+* ❌ No Docker image push
 * ❌ No GitOps updates
-* ❌ No deployments
+* ❌ No ArgoCD interaction
 * ❌ No infrastructure changes
 
-### Why This Matters
+---
 
-* Provides **early feedback** to developers
-* Prevents broken code from reaching environments
-* Keeps `main` safe and reviewable at all times
+### DevSecOps Policy (`main`)
+
+* Trivy runs in **report-only mode**
+* Vulnerabilities **do not fail the pipeline**
+* Used strictly for **developer feedback**
 
 > **`main` validates correctness, not execution**
 
 ---
 
-## 5. `stage` Branch – Integration Environment
+## 5️⃣ `stage` Branch – Integration Environment
 
 ### Purpose
 
-* First environment where **real execution occurs**
-* Closely mirrors production behavior (smaller scale)
+* First environment where **real execution happens**
+* Closely mirrors production behavior
 * Used for **end-to-end validation**
+
+---
 
 ### CI Behavior (Automated)
 
-* ✔ Full CI (tests, SAST, scans)
+* ✔ Full test suite
+* ✔ Security scans (SAST + Trivy)
 * ✔ Docker image build & tagging
-* ✔ Image push to **Stage registry**
-* ✔ GitOps manifest updates (image tags)
+* ✔ Image push to Stage registry (Docker Hub)
+* ✔ GitOps manifest updates (image tags only)
+
+---
 
 ### CD Behavior
 
-* ✔ ArgoCD auto-sync enabled
-* ✔ Automatic deployment to Stage
+* ✔ ArgoCD **auto-sync enabled**
+* ✔ Automatic deployment to Stage cluster
+
+---
+
+### DevSecOps Policy (`stage`)
+
+* Trivy scans **all built images**
+* Vulnerabilities are **reported**
+* Pipeline **does NOT fail**, even if HIGH vulnerabilities.
+
+> This allows legacy apps to progress while maintaining visibility.
+
+---
 
 ### Why This Matters
 
 * Fast feedback loop
-* Early detection of integration issues
-* No manual intervention required
+* Realistic environment testing
+* Zero manual effort
+* No unsafe production exposure
 
 > **Stage follows Continuous Deployment**
 
 ---
 
-## 6. `prod` Branch – Production Environment
+## 6️⃣ `prod` Branch – Production Environment
 
 ### Purpose
 
 * Represents the **live, customer-facing system**
-* Stability and control are the highest priorities
+* Highest standards for **stability, security, and auditability**
+
+---
 
 ### CI Behavior (Automated)
 
-* ✔ Same CI checks as `stage`
-* ✔ Image build and verification
-
-### CD Behavior (Manual Control)
-
-* ✔ GitOps updates require approval
-* ✔ ArgoCD deploys only after approval
-
-### Why This Matters
-
-* Prevents accidental production changes
-* Creates a **clear audit trail**
-* Aligns with enterprise governance models
-
-> **Production follows Continuous Delivery (not Continuous Deployment)**
+* ✔ Same tests and scans as `stage`
+* ✔ Docker image build & verification
+* ✔ Trivy security scanning
 
 ---
 
-## 7. GitOps Execution Model
+### DevSecOps Policy (`prod`)
+
+* ❌ Pipeline **FAILS on CRITICAL vulnerabilities**
+* ✔ HIGH vulnerabilities are reported but tolerated
+* Enforces **risk-based security gating**
+
+> This reflects real-world enterprise DevSecOps behavior.
+
+---
+
+### CD Behavior (Controlled)
+
+* ✔ Manual approval required **before GitOps update**
+* ✔ ArgoCD sync is **manual**
+* ✔ Full audit trail maintained
+
+> **Production follows Continuous Delivery, not Continuous Deployment**
+
+---
+
+## 7️⃣ GitOps Execution Model
 
 This project strictly follows **GitOps principles**.
 
-### Core Rules
+### Non-Negotiable Rules
 
 * Jenkins **never deploys** to Kubernetes
 * Jenkins **only updates Git**
-* ArgoCD is the **only component** allowed to apply changes to clusters
+* ArgoCD is the **only deployment engine**
+
+---
 
 ### Commit Types
 
-| Commit Type                      | Branch          |
-| -------------------------------- | --------------- |
-| Design commits (code, manifests) | `main`          |
-| Execution commits (image tags)   | `stage`, `prod` |
+| Commit Category               | Branch          |
+| ----------------------------- | --------------- |
+| Design & code changes         | `main`          |
+| Execution (image tag updates) | `stage`, `prod` |
 
-This explains why `stage` and `prod` may contain **CI-generated commits**.
+This explains why **CI-generated commits exist only in `stage` and `prod`**.
 
 ---
 
-## 8. Terraform & Infrastructure Workflow
+## 8️⃣ Terraform & Infrastructure Workflow (Future)
 
-Infrastructure changes follow a **stricter control model**.
+Infrastructure follows **stricter controls than applications**.
 
-| Branch  | Terraform Behavior        |
-| ------- | ------------------------- |
-| `main`  | `terraform plan` only     |
-| `stage` | `plan` + **manual apply** |
-| `prod`  | `plan` + **manual apply** |
+| Branch  | Terraform Behavior    |
+| ------- | --------------------- |
+| `main`  | `terraform plan` only |
+| `stage` | `plan` + manual apply |
+| `prod`  | `plan` + manual apply |
 
 ### Benefits
 
-* No accidental infrastructure changes
-* Full review before applying changes
-* Clear separation between **application** and **infrastructure** lifecycles
+* Prevents accidental infra changes
+* Clear separation between app lifecycle and infra lifecycle
+* Production-safe governance model
 
 ---
 
-## 9. Feature Branch Workflow
+## 9️⃣ Feature Branch Workflow
 
-Feature branches are **short-lived** and optional (single-developer setup).
+Feature branches are **short-lived** (single-developer setup).
 
 ### Example
 
@@ -206,7 +251,7 @@ feature/add-order-search
 ### Rules
 
 * Branch from `main`
-* CI runs on feature branches
+* CI runs automatically
 * Merge via Pull Request
 * Delete after merge
 
@@ -214,9 +259,7 @@ feature/add-order-search
 
 ---
 
-## 10. Hotfix Strategy
-
-Hotfixes are handled without bypassing controls.
+## 🔟 Hotfix Strategy
 
 ### Option A – Preferred (Recommended)
 
@@ -226,9 +269,11 @@ hotfix/critical-fix
 main → stage → prod
 ```
 
-* Fix merged into `main`
-* Promoted through `stage`
-* Deployed to `prod` with approval
+* Fix validated properly
+* Security scans enforced
+* Production approval preserved
+
+---
 
 ### Option B – Emergency Only (Rare)
 
@@ -240,21 +285,34 @@ hotfix/critical-fix
       main
 ```
 
-Used only when:
+Used **only** when:
 
 * Immediate production fix is required
-* Followed by mandatory back-merge to `main`
+* Mandatory back-merge to `main` is performed
 
 ---
 
-## 11. Why This Strategy Works
+## 1️⃣1️⃣ Why This Strategy Works
 
-* ✔ Matches real-world enterprise workflows
+* ✔ Mirrors real enterprise CI/CD setups
 * ✔ Clean GitOps implementation
-* ✔ Minimizes production risk
-* ✔ Easy to explain and understand
-* ✔ Scales from single developer to full team
+* ✔ Built-in DevSecOps enforcement
+* ✔ Safe production releases
+* ✔ Easy to explain in interviews
+* ✔ Scales from solo developer to full team
 
 ---
 
+## 🏁 Final Statement
+
+This branching and CI/CD strategy is:
+
+* **Production-grade**
+* **Security-aware**
+* **GitOps-native**
+* **AKS-ready**
+
+It reflects **how modern DevOps teams actually ship software**, not demo pipelines.
+
+---
 

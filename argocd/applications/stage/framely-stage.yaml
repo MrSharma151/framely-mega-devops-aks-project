@@ -2,26 +2,30 @@
 # ArgoCD Application: framely-stage
 #
 # Environment:
-# - Stage (Local KIND / Pre-Production)
+# - Stage (Local KIND now, AKS Stage later)
 #
 # Purpose:
-# - Connect ArgoCD with Kubernetes manifests stored in Git
-# - Continuously reconcile the desired state from Git to the cluster
+# - Connect ArgoCD with Git-based Kubernetes manifests
+# - Continuously reconcile desired state from Git to the cluster
 #
-# This application:
-# - Watches the kubernetes/stage directory
-# - Deploys all Framely services into the framely-stage namespace
-# - Follows strict GitOps principles (Git is the single source of truth)
+# GitOps Model:
+# - Git is the single source of truth
+# - Jenkins updates Git (image tags only)
+# - ArgoCD applies changes to the cluster
+#
+# IMPORTANT:
+# - Fully automated sync is INTENTIONAL for stage
+# - Same file works for KIND and AKS
 # ======================================================================
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: framely-stage
-  namespace: argocd                 # ArgoCD control-plane namespace
+  namespace: argocd   # ArgoCD control-plane namespace (DO NOT CHANGE)
 spec:
   # --------------------------------------------------------------------
-  # ArgoCD Project this application belongs to
+  # ArgoCD Project (Security Boundary)
   # --------------------------------------------------------------------
   project: framely
 
@@ -30,31 +34,41 @@ spec:
   # --------------------------------------------------------------------
   source:
     repoURL: git@github.com:MrSharma151/framely-aks-mega-devops.git
-    targetRevision: stage            # Track the 'stage' branch only
-    path: kubernetes/stage           # GitOps manifests location
+    targetRevision: stage            # Track ONLY the 'stage' branch
+    path: kubernetes/stage           # Stage-level GitOps manifests
 
     # Kustomize is used for environment-specific customization
-    # Image tags are automatically updated by Jenkins
+    # Image tags are updated by Jenkins via GitOps commits
     kustomize: {}
 
+    # FUTURE (OPTIONAL):
+    # If switching to HTTPS repo access:
+    # repoURL: https://github.com/MrSharma151/framely-aks-mega-devops.git
+
   # --------------------------------------------------------------------
-  # Destination: Kubernetes cluster and target namespace
+  # Destination: Kubernetes cluster and namespace
   # --------------------------------------------------------------------
   destination:
     server: https://kubernetes.default.svc
-    namespace: framely-stage         # All resources are deployed here
+    namespace: framely-stage
+
+    # FUTURE (OPTIONAL – Multi-cluster AKS):
+    # server: https://<AKS-STAGE-API-SERVER>
 
   # --------------------------------------------------------------------
-  # Sync Policy: Fully automated for Stage environment
+  # Sync Policy: AUTOMATED (Stage = Continuous Deployment)
   # --------------------------------------------------------------------
   syncPolicy:
     automated:
-      prune: true                    # Delete resources removed from Git
-      selfHeal: true                 # Revert any manual cluster changes
+      prune: true        # Remove resources deleted from Git
+      selfHeal: true     # Revert any manual cluster drift
 
     syncOptions:
-      - CreateNamespace=true         # Create namespace if it does not exist
-      - ApplyOutOfSyncOnly=true      # Apply changes only when drift is detected
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+
+      # FUTURE (OPTIONAL):
+      # - RespectIgnoreDifferences=true
 
   # --------------------------------------------------------------------
   # Application revision history retention
