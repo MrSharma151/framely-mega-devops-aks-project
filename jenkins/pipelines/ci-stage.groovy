@@ -7,12 +7,6 @@
  - CI/CD pipeline for the 'stage' branch
  - Builds, tests, scans, pushes images
  - Updates GitOps repository (image tags only)
-
- KEY PRINCIPLES:
- - Scripted pipeline (loaded from root Jenkinsfile)
- - Jenkins NEVER deploys to Kubernetes
- - Jenkins ONLY updates Git
- - ArgoCD performs deployment to AKS
 ========================================================================
 */
 
@@ -36,11 +30,30 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     env.REPOSITORY_PREFIX       = registry.repositoryPrefix
     env.REGISTRY_CREDENTIALS_ID = registry.credentialsId
 
+    // --------------------------------------------------
+    // Resolve environment-specific frontend build values
+    // --------------------------------------------------
+    // NOTE:
+    // These values are intentionally injected here to keep
+    // apps.yaml environment-agnostic and AKS-ready.
+    def STAGE_API_BASE_URL = "http://localhost:8081/api/v1"
+
+    APPS_CONFIG.apps.each { app ->
+        if (app.type == 'frontend' && app.buildArgs) {
+            app.buildArgs.each { key, value ->
+                if (value == "__API_BASE_URL__") {
+                    app.buildArgs[key] = STAGE_API_BASE_URL
+                }
+            }
+        }
+    }
+
     echo "=================================================="
     echo " STAGE PIPELINE :: CI + GITOPS DELIVERY"
     echo " Environment        : ${ENVIRONMENT}"
     echo " Registry URL       : ${env.REGISTRY_URL}"
     echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
+    echo " Frontend API URL   : ${STAGE_API_BASE_URL}"
     echo " Responsibilities:"
     echo " - Run tests"
     echo " - Run security scans"
@@ -54,11 +67,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     def dockerLib   = load('jenkins/shared/docker.groovy')
     def gitopsLib   = load('jenkins/shared/gitops.groovy')
 
-    /*
-    ================================================================
-    Run Tests
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Run Tests
+    // --------------------------------------------------
     stage('Run Tests') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
@@ -69,11 +80,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         }
     }
 
-    /*
-    ================================================================
-    Security & Quality Scans
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Security & Quality Scans
+    // --------------------------------------------------
     stage('Security & Quality Scans') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
@@ -84,11 +93,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         }
     }
 
-    /*
-    ================================================================
-    Docker Build & Push
-    ================================================================
-    */
+    // --------------------------------------------------
+    // Docker Build & Push
+    // --------------------------------------------------
     stage('Docker Build & Push') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
@@ -104,11 +111,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         }
     }
 
-    /*
-    ================================================================
-    GitOps Update (Stage)
-    ================================================================
-    */
+    // --------------------------------------------------
+    // GitOps Update (Stage)
+    // --------------------------------------------------
     stage('GitOps Update (Stage)') {
         APPS_CONFIG.apps.each { app ->
             echo "--------------------------------------------------"
