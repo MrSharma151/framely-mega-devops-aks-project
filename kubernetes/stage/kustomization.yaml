@@ -34,7 +34,7 @@ resources:
 images:
 - name: docker.io/mrsharma151/framely-backend
   newName: docker.io/mrsharma151/framely-backend
-  newTag: 0.1.0-a0b82c0
+  newTag: 0.1.0-39d7608
 - name: docker.io/mrsharma151/framely-frontend-admin
   newName: docker.io/mrsharma151/framely-frontend-admin
   newTag: 0.1.0-a0b82c0
