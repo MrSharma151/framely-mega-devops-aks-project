@@ -40,4 +40,4 @@ images:
   newTag: 0.1.0-2b27f5d
 - name: docker.io/mrsharma151/framely-frontend-customer
   newName: docker.io/mrsharma151/framely-frontend-customer
-  newTag: 0.1.0-39d7608
+  newTag: 0.1.0-2b27f5d
