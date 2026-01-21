@@ -33,21 +33,11 @@ resources:
 
 
 images:
-- name: docker.io/mrsharma151/framely-backend:0.1.0-e07bed4
-  newName: docker.io/mrsharma151/framely-backend
-  newTag: 0.1.0-e07bed4:0.1.0-e07bed4
-- name: docker.io/mrsharma151/framely-frontend-admin:0.1.0-e07bed4
-  newName: docker.io/mrsharma151/framely-frontend-admin
-  newTag: 0.1.0-e07bed4:0.1.0-e07bed4
-- name: docker.io/mrsharma151/framely-frontend-customer:0.1.0-e07bed4
-  newName: docker.io/mrsharma151/framely-frontend-customer
-  newTag: 0.1.0-e07bed4:0.1.0-e07bed4
-- name: framely/backend
-  newName: mrsharma151/backend
-  newTag: 0.1.0-21e80c1
-- name: framely/frontend-admin
-  newName: mrsharma151/frontend-admin
-  newTag: 0.1.0-21e80c1
-- name: framely/frontend-customer
-  newName: mrsharma151/frontend-customer
-  newTag: 0.1.0-21e80c1
+images:
+- name: docker.io/mrsharma151/framely-backend
+  newTag: 0.1.0-xxxxx
+- name: docker.io/mrsharma151/framely-frontend-admin
+  newTag: 0.1.0-xxxxx
+- name: docker.io/mrsharma151/framely-frontend-customer
+  newTag: 0.1.0-xxxxx
+
