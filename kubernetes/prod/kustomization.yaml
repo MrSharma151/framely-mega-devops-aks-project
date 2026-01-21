@@ -17,11 +17,11 @@ kind: Kustomization
 # Resources
 # ----------------------------------------------------------------------
 resources:
-  - namespace.yaml
-  - backend
-  - frontend-admin
-  - frontend-customer
-  - ingress.yaml
+- namespace.yaml
+- backend
+- frontend-admin
+- frontend-customer
+- ingress.yaml
 
 # ----------------------------------------------------------------------
 # Image overrides (PROD)
@@ -31,7 +31,7 @@ resources:
 images:
 - name: docker.io/mrsharma151/framely-backend
   newName: docker.io/mrsharma151/framely-backend
-  newTag: 0.1.0-ccc5c87
+  newTag: 0.1.0-805fdb3
 - name: docker.io/mrsharma151/framely-frontend-admin
   newName: docker.io/mrsharma151/framely-frontend-admin
   newTag: 0.1.0-ccc5c87
