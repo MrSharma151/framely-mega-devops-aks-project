@@ -27,15 +27,15 @@ resources:
 # Image overrides (Stage)
 # Jenkins updates ONLY the tag via GitOps
 # ----------------------------------------------------------------------
+
 images:
-  - name: framely/backend
-    newName: mrsharma151/framely-backend
-    newTag: <jenkins-managed>
+- name: docker.io/mrsharma151/framely-backend
+  newName: docker.io/mrsharma151/framely-backend
+  newTag: 0.1.0-2b27f5d
+- name: docker.io/mrsharma151/framely-frontend-admin
+  newName: docker.io/mrsharma151/framely-frontend-admin
+  newTag: 0.1.0-2b27f5d
+- name: docker.io/mrsharma151/framely-frontend-customer
+  newName: docker.io/mrsharma151/framely-frontend-customer
+  newTag: 0.1.0-2b27f5d
 
-  - name: framely/frontend-admin
-    newName: mrsharma151/framely-frontend-admin
-    newTag: <jenkins-managed>
-
-  - name: framely/frontend-customer
-    newName: mrsharma151/framely-frontend-customer
-    newTag: <jenkins-managed>
