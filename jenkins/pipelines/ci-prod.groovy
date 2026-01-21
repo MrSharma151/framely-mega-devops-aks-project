@@ -4,146 +4,153 @@
  Framely – Mega DevOps AKS Project
 
  Purpose:
- - Continuous Delivery pipeline for PRODUCTION
- - Build, test, scan applications
- - Build Docker images (push only after approval)
- - Update Kubernetes manifests via GitOps (manual control)
+ - CI/CD pipeline for the 'prod' branch
+ - Builds, tests, scans, and pushes production images
+ - Updates GitOps repository ONLY after manual approval
 
- Environment Characteristics:
- - Highest stability and control
- - Manual approval required
- - Full audit trail
-
- Principle:
- "Production follows Continuous Delivery, not Continuous Deployment"
+ KEY PRINCIPLES:
+ - Scripted pipeline (loaded from root Jenkinsfile)
+ - Jenkins NEVER deploys to Kubernetes
+ - Jenkins ONLY updates Git (GitOps)
+ - Production rollout is approval-controlled
+ - ArgoCD sync is manually triggered in PROD
 ========================================================================
 */
 
-def call() {
+def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
 
-    pipeline {
-        agent any
+    // --------------------------------------------------
+    // Explicit environment context
+    // --------------------------------------------------
+    def ENVIRONMENT = 'prod'
 
-        options {
-            disableConcurrentBuilds()
-            timestamps()
-            ansiColor('xterm')
-        }
+    // --------------------------------------------------
+    // Resolve registry configuration for PROD
+    // --------------------------------------------------
+    def registry = REGISTRIES_CONFIG.registries[ENVIRONMENT]
+    if (!registry) {
+        error "❌ No registry configuration found for environment: ${ENVIRONMENT}"
+    }
 
-        environment {
-            ENVIRONMENT = "prod"
-        }
+    // Export registry details for docker.groovy
+    env.REGISTRY_URL            = registry.registryUrl
+    env.REPOSITORY_PREFIX       = registry.repositoryPrefix
+    env.REGISTRY_CREDENTIALS_ID = registry.credentialsId
 
-        stages {
+    echo "=================================================="
+    echo " PROD PIPELINE :: CONTROLLED CI + GITOPS DELIVERY"
+    echo " Environment        : ${ENVIRONMENT}"
+    echo " Registry URL       : ${env.REGISTRY_URL}"
+    echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
+    echo " Responsibilities:"
+    echo " - Run tests"
+    echo " - Run security scans"
+    echo " - Build & push Docker images"
+    echo " - WAIT for manual approval"
+    echo " - Update GitOps image tags"
+    echo "=================================================="
 
-            stage('Checkout Source Code') {
-                steps {
-                    checkout scm
-                }
-            }
+    // Load shared libraries ONCE
+    def testsLib    = load('jenkins/shared/tests.groovy')
+    def securityLib = load('jenkins/shared/security.groovy')
+    def dockerLib   = load('jenkins/shared/docker.groovy')
+    def gitopsLib   = load('jenkins/shared/gitops.groovy')
 
-            stage('Load Configuration') {
-                steps {
-                    script {
-                        echo "Loading pipeline configuration"
+    /*
+    ================================================================
+    Run Tests
+    ================================================================
+    */
+    stage('Run Tests') {
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Running tests for application: ${app.name}"
+            echo "--------------------------------------------------"
 
-                        APPS_CONFIG   = readYaml file: 'jenkins/config/apps.yaml'
-                        IMAGES_CONFIG = readYaml file: 'jenkins/config/images.yaml'
-
-                        echo "Applications loaded: ${APPS_CONFIG.apps*.name}"
-                    }
-                }
-            }
-
-            stage('Run Tests') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/tests.groovy'
-                                .run(app)
-                        }
-                    }
-                }
-            }
-
-            stage('Security & Quality Scans') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/security.groovy'
-                                .scan(app)
-                        }
-                    }
-                }
-            }
-
-            stage('Docker Build (No Push Yet)') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/docker.groovy'
-                                .build(app, IMAGES_CONFIG, false)
-                        }
-                    }
-                }
-            }
-
-            stage('Manual Approval for Production Release') {
-                steps {
-                    input message: """
-                    Approve PRODUCTION release?
-
-                    Applications : ${APPS_CONFIG.apps*.name.join(', ')}
-                    Commit SHA   : ${env.GIT_COMMIT}
-
-                    This action will:
-                    - Push Docker images
-                    - Update Kubernetes manifests (GitOps)
-                    - Trigger ArgoCD production sync
-                    """,
-                    ok: 'Approve Release'
-                }
-            }
-
-            stage('Docker Push (Post-Approval)') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            // Push the same image that was already built
-                            sh """
-                                echo "Pushing Docker image for ${app.name}"
-                                docker push ${app.builtImage.name}:${app.builtImage.tag}
-                            """
-                        }
-                    }
-                }
-            }
-
-            stage('GitOps Update (Production)') {
-                steps {
-                    script {
-                        APPS_CONFIG.apps.each { app ->
-                            load 'jenkins/shared/gitops.groovy'
-                                .updateImage(app, ENVIRONMENT)
-                        }
-                    }
-                }
-            }
-        }
-
-        post {
-            success {
-                echo "✅ Production pipeline completed successfully"
-                echo "ArgoCD will deploy changes after manual sync approval (if configured)"
-            }
-
-            failure {
-                echo "❌ Production pipeline failed"
-            }
-
-            always {
-                cleanWs()
-            }
+            testsLib.run(app)
         }
     }
+
+    /*
+    ================================================================
+    Security & Quality Scans
+    ================================================================
+    */
+    stage('Security & Quality Scans') {
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Running security scans for application: ${app.name}"
+            echo "--------------------------------------------------"
+
+            securityLib.scan(app)
+        }
+    }
+
+    /*
+    ================================================================
+    Docker Build & Push (Production Images)
+    ================================================================
+    */
+    stage('Docker Build & Push') {
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Building & pushing PRODUCTION image for: ${app.name}"
+            echo "Target environment: ${ENVIRONMENT}"
+            echo "--------------------------------------------------"
+
+            dockerLib.build(
+                app,
+                IMAGES_CONFIG,
+                true    // build + push
+            )
+        }
+    }
+
+    /*
+    ================================================================
+    Manual Approval Gate (Production Release)
+    ================================================================
+    */
+    stage('Manual Approval') {
+        input message: """
+🚨 PRODUCTION RELEASE APPROVAL REQUIRED 🚨
+
+You are about to update the GitOps repository for PROD.
+
+This action will:
+- Change production image versions
+- Allow ArgoCD to deploy to the PROD AKS cluster
+
+Please confirm that:
+✔ Tests and scans have passed
+✔ Images are verified
+✔ Change is approved
+
+Do you want to proceed?
+"""
+    }
+
+    /*
+    ================================================================
+    GitOps Update (Prod)
+    ================================================================
+    */
+    stage('GitOps Update (Prod)') {
+        APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
+            echo "Updating GitOps image tag for: ${app.name}"
+            echo "Environment: ${ENVIRONMENT}"
+            echo "--------------------------------------------------"
+
+            gitopsLib.updateImage(app, ENVIRONMENT)
+        }
+    }
+
+    echo "=================================================="
+    echo " PROD PIPELINE COMPLETED SUCCESSFULLY"
+    echo " GitOps repository updated for PROD"
+    echo " ArgoCD deployment requires MANUAL sync"
+    echo "=================================================="
 }
+
+return this

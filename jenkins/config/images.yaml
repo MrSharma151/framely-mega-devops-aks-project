@@ -3,18 +3,57 @@
 # Framely – Mega DevOps AKS Project
 #
 # Purpose:
-# - Define Docker image names for each application
-# - Keep image naming consistent across environments
-# - Decouple image naming from build logic
+# - Define logical Docker image names for each application
+# - Keep image identity consistent across all environments
+# - Decouple image naming from registry and CI/CD logic
 #
-# Image Naming Convention (Docker Hub):
-#   <dockerhub-username>/<application-name>
+# IMPORTANT DESIGN NOTES:
+# - This file defines ONLY image names (no registry, no tags)
+# - Registry details are resolved via `registries.yaml`
+# - Jenkins constructs the final image reference at runtime as:
 #
-# Example:
-#   mrsharma151/backend:abc123
+#     <registryUrl>/<repositoryPrefix>/<image-name>:<tag>
+#
+# CURRENT STATE:
+# - Images are built and pushed to Docker Hub
+#
+# FUTURE STATE:
+# - Same image names will be reused with Azure Container Registry (ACR)
+# - No changes required in pipelines or GitOps logic
 # ======================================================================
 
 images:
-  backend: mrsharma151/backend
-  frontend-admin: mrsharma151/frontend-admin
-  frontend-customer: mrsharma151/frontend-customer
+  # --------------------------------------------------------------------
+  # Backend API Docker Image
+  # --------------------------------------------------------------------
+  backend: framely-backend
+  #
+  # Example (CURRENT – Docker Hub):
+  # docker.io/mrsharma151/framely-backend:v1.0.0
+  #
+  # Example (FUTURE – Azure ACR):
+  # framelystage.azurecr.io/framely/framely-backend:v1.0.0
+
+
+  # --------------------------------------------------------------------
+  # Admin Frontend (Next.js) Docker Image
+  # --------------------------------------------------------------------
+  frontend-admin: framely-frontend-admin
+  #
+  # Example (CURRENT – Docker Hub):
+  # docker.io/mrsharma151/framely-frontend-admin:v1.0.0
+  #
+  # Example (FUTURE – Azure ACR):
+  # framelystage.azurecr.io/framely/framely-frontend-admin:v1.0.0
+
+
+  # --------------------------------------------------------------------
+  # Customer Frontend (Next.js) Docker Image
+  # --------------------------------------------------------------------
+  frontend-customer: framely-frontend-customer
+  #
+  # Example (CURRENT – Docker Hub):
+  # docker.io/mrsharma151/framely-frontend-customer:v1.0.0
+  #
+  # Example (FUTURE – Azure ACR):
+  # framelystage.azurecr.io/framely/framely-frontend-customer:v1.0.0

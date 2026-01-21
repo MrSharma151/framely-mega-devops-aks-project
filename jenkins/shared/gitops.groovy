@@ -1,34 +1,72 @@
+/*
+========================================================================
+ gitops.groovy
+ Framely – Mega DevOps AKS Project
+
+ Purpose:
+ - Update Kubernetes manifests via GitOps
+ - Modify image tags in Kustomize configuration
+ - Trigger ArgoCD reconciliation (indirectly)
+
+ KEY PRINCIPLES:
+ - Jenkins NEVER deploys to Kubernetes
+ - Jenkins ONLY updates Git (single source of truth)
+ - ArgoCD performs actual deployment
+========================================================================
+*/
+
 def updateImage(app, environment) {
 
     stage("GitOps Update :: ${app.name} :: ${environment}") {
 
+        // --------------------------------------------------
+        // Defensive checks
+        // --------------------------------------------------
+        if (!app.builtImage) {
+            error """
+❌ No built image metadata found for application: ${app.name}
+
+Ensure Docker build & push stage completed successfully
+before attempting GitOps update.
+"""
+        }
+
         echo "--------------------------------------------------"
-        echo "Updating Kubernetes manifests (GitOps)"
+        echo "Starting GitOps image update"
         echo "Application : ${app.name}"
         echo "Environment : ${environment}"
         echo "Image       : ${app.builtImage.name}:${app.builtImage.tag}"
         echo "--------------------------------------------------"
 
-        // Root-level kustomization (single source of truth)
+        // --------------------------------------------------
+        // GitOps repository structure
+        // --------------------------------------------------
         def gitopsPath = "kubernetes/${environment}"
 
         // IMPORTANT:
-        // LEFT side must match deployment.yaml image
-        def kustomizeImageName = "framely/${app.name}"
+        // This MUST match the image name defined in kustomization.yaml
+        // We derive it from the logical image name to avoid drift.
+        def kustomizeImageName = app.builtImage.name
 
-        // Build docker image explicitly (avoid nulls)
+        // Full docker image reference
         def dockerImage = "${app.builtImage.name}:${app.builtImage.tag}"
 
+        // --------------------------------------------------
+        // Ensure correct Git branch
+        // --------------------------------------------------
         sh """
-            echo "Ensuring correct Git branch: ${environment}"
+            echo "Switching to GitOps branch: ${environment}"
             git fetch origin ${environment}
             git checkout ${environment}
             git pull origin ${environment}
         """
 
+        // --------------------------------------------------
+        // Update Kustomize image mapping
+        // --------------------------------------------------
         dir(gitopsPath) {
             sh """
-                echo "Updating image mapping in root kustomization.yaml"
+                echo "Updating image in kustomization.yaml"
                 echo "Kustomize Image Name : ${kustomizeImageName}"
                 echo "Docker Image         : ${dockerImage}"
 
@@ -37,12 +75,21 @@ def updateImage(app, environment) {
             """
         }
 
+        // --------------------------------------------------
+        // Commit GitOps change
+        // --------------------------------------------------
         sh """
+            git config user.name "Jenkins"
+            git config user.email "jenkins@framely.local"
+
             git status
             git add kubernetes/${environment}/kustomization.yaml
             git commit -m "gitops(${environment}): update ${app.name} image to ${app.builtImage.tag} [skip ci]"
         """
 
+        // --------------------------------------------------
+        // Push changes using GitHub PAT
+        // --------------------------------------------------
         withCredentials([
             usernamePassword(
                 credentialsId: 'github-pat',
@@ -51,8 +98,6 @@ def updateImage(app, environment) {
             )
         ]) {
             sh """
-                git config user.name "Jenkins"
-                git config user.email "jenkins@framely.local"
                 git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/MrSharma151/framely-aks-mega-devops.git ${environment}
             """
         }

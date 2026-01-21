@@ -4,23 +4,57 @@
 #
 # Purpose:
 # - Define container registry details per environment
-# - Keep registry configuration out of pipelines
-# - Allow environment-specific isolation
+# - Keep registry configuration completely out of pipelines
+# - Support seamless migration between Docker Hub and Azure ACR
+#
+# DESIGN PRINCIPLES:
+# - Pipelines never hardcode registry URLs or credentials
+# - Jenkins resolves registry details dynamically per environment
+# - Switching registry requires ONLY config change (no code change)
 #
 # NOTE:
-# - Credentials are stored in Jenkins Credentials Manager
-# - Pipelines only reference credential IDs
+# - All credentials are stored in Jenkins Credentials Manager
+# - Pipelines reference ONLY the credentialsId
 # ======================================================================
 
 registries:
+  # --------------------------------------------------------------------
+  # STAGE Environment Registry
+  # --------------------------------------------------------------------
   stage:
+    # -------------------------------
+    # CURRENT: Docker Hub (ACTIVE)
+    # -------------------------------
     type: dockerhub
     registryUrl: docker.io
     repositoryPrefix: mrsharma151
     credentialsId: dockerhub-creds
 
+    # -------------------------------
+    # FUTURE: Azure Container Registry
+    # -------------------------------
+    # type: acr
+    # registryUrl: framelystage.azurecr.io
+    # repositoryPrefix: framely
+    # credentialsId: acr-stage-creds
+
+
+  # --------------------------------------------------------------------
+  # PROD Environment Registry
+  # --------------------------------------------------------------------
   prod:
-    type: acr
-    registryUrl: framelyacr.azurecr.io
-    repositoryPrefix: framely
-    credentialsId: acr-prod-creds
+    # -------------------------------
+    # CURRENT: Docker Hub (ACTIVE)
+    # -------------------------------
+    type: dockerhub
+    registryUrl: docker.io
+    repositoryPrefix: mrsharma151
+    credentialsId: dockerhub-creds
+
+    # -------------------------------
+    # FUTURE: Azure Container Registry
+    # -------------------------------
+    # type: acr
+    # registryUrl: framelyprod.azurecr.io
+    # repositoryPrefix: framely
+    # credentialsId: acr-prod-creds

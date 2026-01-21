@@ -4,71 +4,127 @@
  Framely – Mega DevOps AKS Project
 
  Purpose:
- - Scripted CI/CD logic for the 'stage' branch
- - Executed from the root Jenkinsfile
- - Build, test, scan, push images, and update GitOps manifests
+ - CI/CD pipeline for the 'stage' branch
+ - Builds, tests, scans, pushes images
+ - Updates GitOps repository (image tags only)
 
- Design Rules:
- - NO declarative pipeline here
- - NO agent / options / post blocks
- - ONLY executable stages
- - Jenkins updates Git, ArgoCD deploys
+ KEY PRINCIPLES:
+ - Scripted pipeline (loaded from root Jenkinsfile)
+ - Jenkins NEVER deploys to Kubernetes
+ - Jenkins ONLY updates Git
+ - ArgoCD performs deployment to AKS
 ========================================================================
 */
 
 def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
 
+    // --------------------------------------------------
+    // Explicit environment context
+    // --------------------------------------------------
+    def ENVIRONMENT = 'stage'
+
+    // --------------------------------------------------
+    // Resolve registry configuration for STAGE
+    // --------------------------------------------------
+    def registry = REGISTRIES_CONFIG.registries[ENVIRONMENT]
+    if (!registry) {
+        error "❌ No registry configuration found for environment: ${ENVIRONMENT}"
+    }
+
+    // Export registry details for docker.groovy
+    env.REGISTRY_URL            = registry.registryUrl
+    env.REPOSITORY_PREFIX       = registry.repositoryPrefix
+    env.REGISTRY_CREDENTIALS_ID = registry.credentialsId
+
     echo "=================================================="
-    echo "STAGE PIPELINE :: CI + Continuous Deployment"
-    echo "Environment : stage"
+    echo " STAGE PIPELINE :: CI + GITOPS DELIVERY"
+    echo " Environment        : ${ENVIRONMENT}"
+    echo " Registry URL       : ${env.REGISTRY_URL}"
+    echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
+    echo " Responsibilities:"
+    echo " - Run tests"
+    echo " - Run security scans"
+    echo " - Build & push Docker images"
+    echo " - Update GitOps image tags"
     echo "=================================================="
 
+    // Load shared libraries ONCE
+    def testsLib    = load('jenkins/shared/tests.groovy')
+    def securityLib = load('jenkins/shared/security.groovy')
+    def dockerLib   = load('jenkins/shared/docker.groovy')
+    def gitopsLib   = load('jenkins/shared/gitops.groovy')
+
+    /*
+    ================================================================
+    Run Tests
+    ================================================================
+    */
     stage('Run Tests') {
-        echo "Running unit and integration tests"
-
         APPS_CONFIG.apps.each { app ->
-            echo "Executing tests for application: ${app.name}"
+            echo "--------------------------------------------------"
+            echo "Running tests for application: ${app.name}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/tests.groovy')
-                .run(app)
+            testsLib.run(app)
         }
     }
 
+    /*
+    ================================================================
+    Security & Quality Scans
+    ================================================================
+    */
     stage('Security & Quality Scans') {
-        echo "Running security and quality scans (ENFORCED)"
-
         APPS_CONFIG.apps.each { app ->
-            echo "Scanning application: ${app.name}"
+            echo "--------------------------------------------------"
+            echo "Running security scans for application: ${app.name}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/security.groovy')
-                .scan(app)
+            securityLib.scan(app)
         }
     }
 
+    /*
+    ================================================================
+    Docker Build & Push
+    ================================================================
+    */
     stage('Docker Build & Push') {
-        echo "Building and pushing Docker images to STAGE registry"
-
         APPS_CONFIG.apps.each { app ->
-            echo "Building & pushing image for: ${app.name}"
+            echo "--------------------------------------------------"
+            echo "Building & pushing Docker image for: ${app.name}"
+            echo "Target environment: ${ENVIRONMENT}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/docker.groovy')
-                .build(app, IMAGES_CONFIG, true)
+            dockerLib.build(
+                app,
+                IMAGES_CONFIG,
+                true    // build + push
+            )
         }
     }
 
+    /*
+    ================================================================
+    GitOps Update (Stage)
+    ================================================================
+    */
     stage('GitOps Update (Stage)') {
-        echo "Updating GitOps manifests for STAGE environment"
-
         APPS_CONFIG.apps.each { app ->
-            echo "Updating image tag for application: ${app.name}"
+            echo "--------------------------------------------------"
+            echo "Updating GitOps image tag for: ${app.name}"
+            echo "Environment: ${ENVIRONMENT}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/gitops.groovy')
-                .updateImage(app, 'stage')
+            gitopsLib.updateImage(app, ENVIRONMENT)
         }
     }
 
-    echo "✅ STAGE pipeline completed successfully"
-    echo "ArgoCD will automatically sync changes to the STAGE cluster"
+    echo "=================================================="
+    echo " STAGE PIPELINE COMPLETED SUCCESSFULLY"
+    echo " GitOps repository updated"
+    echo " ArgoCD will automatically deploy to STAGE AKS"
+    echo "=================================================="
 }
 
 return this

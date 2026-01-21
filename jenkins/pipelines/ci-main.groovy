@@ -4,58 +4,102 @@
  Framely – Mega DevOps AKS Project
 
  Purpose:
- - Scripted CI logic for the 'main' branch
- - Executed from the root Jenkinsfile
- - Performs validation-only CI checks
+ - CI pipeline for the 'main' branch
+ - Performs validation-only checks
+ - Ensures code quality before promotion to stage
 
- Design Rules:
- - NO declarative pipeline here
- - NO agent / options / post blocks
- - ONLY executable stages
+ DESIGN RULES:
+ - Scripted pipeline (loaded from root Jenkinsfile)
+ - NO image push
+ - NO GitOps updates
+ - NO Kubernetes interaction
 ========================================================================
 */
 
 def run(APPS_CONFIG, IMAGES_CONFIG) {
 
     echo "=================================================="
-    echo "MAIN CI PIPELINE :: Validation Only"
-    echo "Environment : main"
+    echo " MAIN CI PIPELINE :: VALIDATION ONLY"
+    echo " Branch       : main"
+    echo " Responsibilities:"
+    echo " - Run tests"
+    echo " - Run security scans"
+    echo " - Verify Docker builds (NO PUSH)"
     echo "=================================================="
 
+    // Load shared libraries once (performance + clarity)
+    def testsLib    = load('jenkins/shared/tests.groovy')
+    def securityLib = load('jenkins/shared/security.groovy')
+    def dockerLib   = load('jenkins/shared/docker.groovy')
+
+    /*
+    ================================================================
+    Run Tests
+    ------------------------------------------------
+    - Executes unit / integration tests for all apps
+    - Fails fast if any application test fails
+    ================================================================
+    */
     stage('Run Tests') {
-        echo "Running unit and integration tests"
+        echo "Starting test execution for all applications"
 
         APPS_CONFIG.apps.each { app ->
-            echo "Executing tests for application: ${app.name}"
+            echo "--------------------------------------------------"
+            echo "Running tests for application: ${app.name}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/tests.groovy')
-                .run(app)
+            testsLib.run(app)
         }
     }
 
+    /*
+    ================================================================
+    Security & Quality Scans
+    ------------------------------------------------
+    - Runs basic security and quality checks
+    - Helps catch vulnerable dependencies early
+    ================================================================
+    */
     stage('Security & Quality Scans') {
-        echo "Running security and quality scans"
+        echo "Starting security and quality scans"
 
         APPS_CONFIG.apps.each { app ->
+            echo "--------------------------------------------------"
             echo "Scanning application: ${app.name}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/security.groovy')
-                .scan(app)
+            securityLib.scan(app)
         }
     }
 
+    /*
+    ================================================================
+    Docker Build Verification
+    ------------------------------------------------
+    - Builds Docker images to validate Dockerfiles
+    - Ensures build-time contracts are correct
+    - Images are NOT pushed to any registry
+    ================================================================
+    */
     stage('Docker Build (Verification Only)') {
-        echo "Building Docker images (verification only)"
+        echo "Verifying Docker image builds (NO PUSH)"
 
         APPS_CONFIG.apps.each { app ->
-            echo "Building Docker image for: ${app.name}"
+            echo "--------------------------------------------------"
+            echo "Building Docker image for verification: ${app.name}"
+            echo "--------------------------------------------------"
 
-            load('jenkins/shared/docker.groovy')
-                .build(app, IMAGES_CONFIG, false)
+            dockerLib.build(
+                app,
+                IMAGES_CONFIG,
+                false   // false = build only, do NOT push
+            )
         }
     }
 
-    echo "✅ MAIN CI validation completed successfully"
+    echo "=================================================="
+    echo " MAIN CI PIPELINE COMPLETED SUCCESSFULLY"
+    echo "=================================================="
 }
 
 return this

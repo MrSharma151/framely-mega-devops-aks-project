@@ -1,35 +1,50 @@
 apps:
   # --------------------------------------------------------------------
-  # Backend API service
+  # Backend API Service
   # --------------------------------------------------------------------
   - name: backend
     type: backend
     path: apps/backend
 
+    # Backend uses runtime environment variables only.
+    # No build-time arguments are required.
+    # Configuration is injected via Kubernetes manifests.
+    
 
   # --------------------------------------------------------------------
-  # Admin Frontend Application
+  # Admin Frontend Application (Next.js)
   # --------------------------------------------------------------------
   - name: frontend-admin
     type: frontend
     path: apps/frontend-admin
+
+    # Test and security commands executed during CI
     testCommand: npm test
     securityCommand: npm audit --audit-level=high
 
+    # Build-time arguments for Next.js
+    # NOTE:
+    # - NEXT_PUBLIC_* variables are injected at BUILD TIME
+    # - basePath is NOT used (must remain unset as per app contract)
+    # - API base URL will be injected dynamically per environment
     buildArgs:
-      NEXT_PUBLIC_BASE_PATH: /admin
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082/api
+      NEXT_PUBLIC_API_BASE_URL: __API_BASE_URL__
 
 
   # --------------------------------------------------------------------
-  # Customer Frontend Application
+  # Customer Frontend Application (Next.js)
   # --------------------------------------------------------------------
   - name: frontend-customer
     type: frontend
     path: apps/frontend-customer
+
+    # Test and security commands executed during CI
     testCommand: npm test
     securityCommand: npm audit --audit-level=high
 
+    # Build-time arguments for Next.js
+    # NOTE:
+    # - basePath is NOT used
+    # - API base URL is environment-specific
     buildArgs:
-      NEXT_PUBLIC_BASE_PATH: /app
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082/api
+      NEXT_PUBLIC_API_BASE_URL: __API_BASE_URL__
