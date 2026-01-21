@@ -37,7 +37,7 @@ images:
   newTag: 0.1.0-ccc5c87
 - name: docker.io/mrsharma151/framely-frontend-admin
   newName: docker.io/mrsharma151/framely-frontend-admin
-  newTag: 0.1.0-cfaf5ca
+  newTag: 0.1.0-ccc5c87
 - name: docker.io/mrsharma151/framely-frontend-customer
   newName: docker.io/mrsharma151/framely-frontend-customer
   newTag: 0.1.0-cfaf5ca
