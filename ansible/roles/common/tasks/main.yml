@@ -1,0 +1,40 @@
+---
+# ============================================
+# Role: common
+# Purpose:
+#   - Prepare base OS for Jenkins VM
+#   - Install essential system packages
+#   - Ensure apt is ready for further tooling
+# ============================================
+
+- name: Update apt package index
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  tags:
+    - common
+    - base
+
+- name: Install base system dependencies required by all roles
+  apt:
+    name:
+      - apt-transport-https     # Required for HTTPS-based APT repositories
+      - ca-certificates         # SSL certificates for secure downloads
+      - curl                    # Used by multiple installers (Docker, Node, Trivy)
+      - wget                    # Backup download utility
+      - gnupg                   # Required to add GPG keys
+      - lsb-release             # OS release information
+      - unzip                   # Required for binary installations (kustomize, etc.)
+      - software-properties-common
+      - git                     # Required for Jenkins checkout & GitOps commits
+    state: present
+  tags:
+    - common
+    - base
+
+- name: Ensure system packages are upgraded safely
+  apt:
+    upgrade: dist
+  tags:
+    - common
+    - base

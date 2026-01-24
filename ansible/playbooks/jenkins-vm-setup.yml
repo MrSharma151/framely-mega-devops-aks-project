@@ -1,0 +1,41 @@
+---
+# =========================================================
+# Playbook: Jenkins VM Setup
+# Project: Framely – Mega DevOps AKS Project
+#
+# Purpose:
+#   - Configure Azure VM as Jenkins CI server
+#   - Install all required CI / GitOps / DevSecOps tools
+#   - Ensure full parity with local development setup
+#
+# IMPORTANT:
+#   - This playbook does NOT provision infrastructure
+#   - This playbook does NOT deploy applications
+#   - This playbook is SAFE to re-run (idempotent)
+# =========================================================
+
+- name: Configure Jenkins VM for Framely CI
+  hosts: jenkins
+  become: true
+
+  roles:
+    # Base system preparation (must always run first)
+    - common
+
+    # Docker engine (required for CI pipelines)
+    - docker
+
+    # Jenkins CI server
+    - jenkins
+
+    # Backend CI dependency (.NET SDK 9.x)
+    - dotnet
+
+    # Frontend CI dependency (Node.js 20.x + npm)
+    - nodejs
+
+    # GitOps tool for image updates
+    - kustomize
+
+    # DevSecOps vulnerability scanner
+    - trivy

@@ -1,0 +1,43 @@
+---
+# ============================================
+# Role: trivy
+# Purpose:
+#   - Install Trivy vulnerability scanner
+#   - Required for DevSecOps enforcement in CI
+# ============================================
+
+- name: Add Trivy official GPG key
+  apt_key:
+    url: https://aquasecurity.github.io/trivy-repo/deb/public.key
+    state: present
+  tags:
+    - trivy
+
+- name: Add Trivy official APT repository
+  apt_repository:
+    repo: deb https://aquasecurity.github.io/trivy-repo/deb {{ ansible_distribution_release }} main
+    state: present
+    filename: trivy
+  tags:
+    - trivy
+
+- name: Update apt cache after adding Trivy repository
+  apt:
+    update_cache: yes
+  tags:
+    - trivy
+
+- name: Install Trivy
+  apt:
+    name: trivy
+    state: present
+  tags:
+    - trivy
+
+- name: Verify Trivy installation for Jenkins user
+  command: trivy version
+  become_user: "{{ jenkins_user }}"
+  register: trivy_check
+  changed_when: false
+  tags:
+    - trivy

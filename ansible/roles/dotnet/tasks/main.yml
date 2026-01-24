@@ -1,0 +1,50 @@
+---
+# ============================================
+# Role: dotnet
+# Purpose:
+#   - Install .NET SDK 9.x using official script
+#   - Ensure global availability for Jenkins
+# ============================================
+
+- name: Create temporary directory for dotnet installation
+  file:
+    path: /tmp/dotnet-install
+    state: directory
+    mode: '0755'
+  tags:
+    - dotnet
+
+- name: Download official Microsoft dotnet install script
+  get_url:
+    url: https://dot.net/v1/dotnet-install.sh
+    dest: /tmp/dotnet-install/dotnet-install.sh
+    mode: '0755'
+  tags:
+    - dotnet
+
+- name: Install .NET SDK {{ dotnet_version }} using install script
+  command: >
+    /tmp/dotnet-install/dotnet-install.sh
+    --version {{ dotnet_version }}
+    --install-dir /usr/share/dotnet
+  args:
+    creates: /usr/share/dotnet/dotnet
+  tags:
+    - dotnet
+
+- name: Create symlink for dotnet binary in /usr/bin
+  file:
+    src: /usr/share/dotnet/dotnet
+    dest: /usr/bin/dotnet
+    state: link
+    force: yes
+  tags:
+    - dotnet
+
+- name: Verify dotnet installation for Jenkins user
+  command: dotnet --version
+  become_user: "{{ jenkins_user }}"
+  register: dotnet_check
+  changed_when: false
+  tags:
+    - dotnet

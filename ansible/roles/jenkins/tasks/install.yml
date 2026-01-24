@@ -1,0 +1,41 @@
+---
+# ============================================
+# Jenkins Installation Tasks
+# ============================================
+
+- name: Install Java (OpenJDK 17) required for Jenkins
+  apt:
+    name: "{{ java_package }}"
+    state: present
+  tags:
+    - jenkins
+    - java
+
+- name: Add Jenkins official GPG key
+  apt_key:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
+    state: present
+  tags:
+    - jenkins
+
+- name: Add Jenkins official APT repository
+  apt_repository:
+    repo: deb https://pkg.jenkins.io/debian-stable binary/
+    state: present
+    filename: jenkins
+  tags:
+    - jenkins
+
+- name: Update apt cache after adding Jenkins repository
+  apt:
+    update_cache: yes
+  tags:
+    - jenkins
+
+- name: Install Jenkins (LTS)
+  apt:
+    name: jenkins
+    state: present
+  notify: Restart Jenkins
+  tags:
+    - jenkins

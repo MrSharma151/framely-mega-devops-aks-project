@@ -1,0 +1,83 @@
+---
+# ============================================
+# Role: docker
+# Purpose:
+#   - Install Docker Engine from official repository
+#   - Configure Docker for Jenkins usage
+#   - Ensure Docker is usable without sudo
+# ============================================
+
+- name: Remove any old Docker versions if present
+  apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+  ignore_errors: true
+  tags:
+    - docker
+
+- name: Add Docker official GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  tags:
+    - docker
+
+- name: Add Docker official APT repository
+  apt_repository:
+    repo: >
+      deb [arch=amd64]
+      https://download.docker.com/linux/ubuntu
+      {{ ansible_distribution_release }} stable
+    state: present
+    filename: docker
+  tags:
+    - docker
+
+- name: Update apt cache after adding Docker repository
+  apt:
+    update_cache: yes
+  tags:
+    - docker
+
+- name: Install Docker Engine and related components
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+  notify: Restart Docker
+  tags:
+    - docker
+
+- name: Ensure Docker service is enabled and running
+  service:
+    name: docker
+    state: started
+    enabled: yes
+  tags:
+    - docker
+
+- name: Add Jenkins user to docker group
+  user:
+    name: "{{ jenkins_user }}"
+    groups: docker
+    append: yes
+  notify:
+    - Restart Docker
+    - Restart Jenkins
+  tags:
+    - docker
+
+- name: Verify Docker is accessible by Jenkins user
+  command: docker ps
+  become_user: "{{ jenkins_user }}"
+  register: docker_test
+  changed_when: false
+  tags:
+    - docker

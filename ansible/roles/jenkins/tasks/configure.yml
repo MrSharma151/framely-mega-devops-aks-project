@@ -1,0 +1,28 @@
+---
+# ============================================
+# Jenkins Configuration Tasks
+# ============================================
+
+- name: Ensure Jenkins service is enabled and running
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+  tags:
+    - jenkins
+
+- name: Wait for Jenkins to become available
+  wait_for:
+    port: "{{ jenkins_port }}"
+    delay: 10
+    timeout: 120
+  tags:
+    - jenkins
+
+- name: Ensure Jenkins user exists
+  user:
+    name: "{{ jenkins_user }}"
+    shell: /bin/bash
+    create_home: yes
+  tags:
+    - jenkins

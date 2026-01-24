@@ -1,0 +1,46 @@
+---
+# ============================================
+# Role: kustomize
+# Purpose:
+#   - Install Kustomize CLI globally
+#   - Required for GitOps image updates
+# ============================================
+
+- name: Define Kustomize version
+  set_fact:
+    kustomize_version: "5.4.1"
+  tags:
+    - kustomize
+
+- name: Download Kustomize binary archive
+  get_url:
+    url: "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{ kustomize_version }}/kustomize_v{{ kustomize_version }}_linux_amd64.tar.gz"
+    dest: /tmp/kustomize.tar.gz
+    mode: '0644'
+  tags:
+    - kustomize
+
+- name: Extract Kustomize binary
+  unarchive:
+    src: /tmp/kustomize.tar.gz
+    dest: /tmp
+    remote_src: yes
+  tags:
+    - kustomize
+
+- name: Move Kustomize binary to /usr/local/bin
+  copy:
+    src: /tmp/kustomize
+    dest: /usr/local/bin/kustomize
+    mode: '0755'
+    remote_src: yes
+  tags:
+    - kustomize
+
+- name: Verify Kustomize installation for Jenkins user
+  command: kustomize version --short
+  become_user: "{{ jenkins_user }}"
+  register: kustomize_check
+  changed_when: false
+  tags:
+    - kustomize

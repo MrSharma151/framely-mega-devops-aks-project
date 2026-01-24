@@ -1,0 +1,14 @@
+---
+# ============================================
+# Role: jenkins
+# Purpose:
+#   - Install Jenkins CI server (LTS)
+#   - Configure Jenkins runtime prerequisites
+#   - Ensure Jenkins service is running
+# ============================================
+
+- name: Include Jenkins installation tasks
+  import_tasks: install.yml
+
+- name: Include Jenkins configuration tasks
+  import_tasks: configure.yml

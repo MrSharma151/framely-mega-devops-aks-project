@@ -1,0 +1,22 @@
+# =========================================================
+# Group Variables for Jenkins VM
+# Scope:
+#   - Applied to all hosts in [jenkins] group
+# Purpose:
+#   - Central place for Jenkins-related configuration
+# =========================================================
+
+# Jenkins runtime user
+jenkins_user: jenkins
+
+# Jenkins service port
+jenkins_port: 8080
+
+# Java version required by Jenkins
+java_package: openjdk-17-jdk
+
+# .NET SDK version (MANDATORY: must match local setup)
+dotnet_version: "9.0"
+
+# Node.js major version (MANDATORY for frontend CI)
+nodejs_version: "20"

@@ -1,0 +1,15 @@
+---
+# ============================================
+# Handlers for docker role
+# ============================================
+
+- name: Restart Docker
+  service:
+    name: docker
+    state: restarted
+
+- name: Restart Jenkins
+  service:
+    name: jenkins
+    state: restarted
+  ignore_errors: true

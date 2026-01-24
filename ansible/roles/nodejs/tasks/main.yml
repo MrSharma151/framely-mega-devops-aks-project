@@ -1,0 +1,39 @@
+---
+# ============================================
+# Role: nodejs
+# Purpose:
+#   - Install Node.js 20.x using NodeSource
+#   - Ensure npm is available globally
+#   - Make Node.js accessible for Jenkins user
+# ============================================
+
+- name: Add NodeSource Node.js {{ nodejs_version }} repository
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_{{ nodejs_version }}.x | bash -
+  args:
+    executable: /bin/bash
+  tags:
+    - nodejs
+
+- name: Install Node.js {{ nodejs_version }} (includes npm)
+  apt:
+    name: nodejs
+    state: present
+  tags:
+    - nodejs
+
+- name: Verify Node.js installation for Jenkins user
+  command: node --version
+  become_user: "{{ jenkins_user }}"
+  register: node_check
+  changed_when: false
+  tags:
+    - nodejs
+
+- name: Verify npm installation for Jenkins user
+  command: npm --version
+  become_user: "{{ jenkins_user }}"
+  register: npm_check
+  changed_when: false
+  tags:
+    - nodejs

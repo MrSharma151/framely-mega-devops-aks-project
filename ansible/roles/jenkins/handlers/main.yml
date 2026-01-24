@@ -1,0 +1,9 @@
+---
+# ============================================
+# Handlers for Jenkins role
+# ============================================
+
+- name: Restart Jenkins
+  service:
+    name: jenkins
+    state: restarted
