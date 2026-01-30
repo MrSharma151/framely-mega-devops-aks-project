@@ -21,7 +21,7 @@ spec:
       # ------------------------------------------------------------
       containers:
         - name: backend
-          image: framely/backend:latest
+          image: framely-backend:latest
           # Image tag will be updated by Jenkins via Kustomize (prod branch)
 
           ports:

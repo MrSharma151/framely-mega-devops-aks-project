@@ -7,10 +7,13 @@
  - Perform security and vulnerability scans during CI pipelines
  - Enforce stricter policies as code moves closer to production
 
- SECURITY POLICY:
- - main  → Report-only mode (does NOT fail pipeline)
- - stage → Report-only mode (temporary relaxation)
- - prod  → Enforced (fails on vulnerabilities)
+ SECURITY POLICY (CURRENT STATE):
+ - main  → Report-only mode
+ - stage → Report-only mode
+ - prod  → Report-only mode (TEMPORARY – infra not provisioned)
+
+ FUTURE STATE:
+ - prod  → Enforced (fail on CRITICAL/HIGH vulnerabilities)
 
  DESIGN PRINCIPLES:
  - Single responsibility: security scanning only
@@ -20,12 +23,9 @@
 */
 
 def scan(app) {
-    /*
-    NOTE:
-    This stage is intentionally nested under the caller pipeline stage
-    to provide per-application visibility in CI logs.
-    */
+
     stage("Security Scan :: ${app.name}") {
+
         echo '--------------------------------------------------'
         echo "Starting security scan for application: ${app.name}"
         echo "Application path : ${app.path}"
@@ -34,6 +34,7 @@ def scan(app) {
 
         dir(app.path) {
             try {
+
                 // --------------------------------------------------
                 // Backend Application (.NET)
                 // --------------------------------------------------
@@ -64,26 +65,14 @@ def scan(app) {
                 }
 
             } catch (Exception e) {
+
                 echo "⚠️ Security issues detected for application: ${app.name}"
                 echo "Error details: ${e}"
 
                 // --------------------------------------------------
-                // SECURITY POLICY ENFORCEMENT
+                // TEMPORARY REPORT-ONLY MODE (ALL BRANCHES)
                 // --------------------------------------------------
-                if (env.BRANCH_NAME == 'prod') {
-                    error """
-==================================================
- SECURITY SCAN FAILED (ENFORCED MODE)
---------------------------------------------------
- Application : ${app.name}
- Branch      : prod
-
- Critical or high severity vulnerabilities detected.
- Pipeline execution stopped to protect production.
-==================================================
-"""
-                } else {
-                    echo """
+                echo """
 ==================================================
  SECURITY SCAN RESULT (REPORT-ONLY MODE)
 --------------------------------------------------
@@ -92,10 +81,10 @@ def scan(app) {
 
  - Vulnerabilities detected
  - Pipeline NOT failed
- - Action: Fix issues before promoting to production
+ - Reason   : Production infrastructure not provisioned yet
+ - Action   : Enforce policy once real PROD is live
 ==================================================
 """
-                }
             }
         }
     }
