@@ -35,8 +35,9 @@
     - trivy
 
 - name: Verify Trivy installation for Jenkins user
-  command: trivy version
-  become_user: "{{ jenkins_user }}"
+  command: sudo -u {{ jenkins_user }} trivy version
+  args:
+    chdir: /tmp
   register: trivy_check
   changed_when: false
   tags:

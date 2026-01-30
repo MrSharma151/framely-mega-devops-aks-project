@@ -22,10 +22,10 @@
   tags:
     - dotnet
 
-- name: Install .NET SDK {{ dotnet_version }} using install script
+- name: Install .NET SDK {{ dotnet_version }} (preview / current) using install script
   command: >
     /tmp/dotnet-install/dotnet-install.sh
-    --version {{ dotnet_version }}
+    --channel {{ dotnet_version }}
     --install-dir /usr/share/dotnet
   args:
     creates: /usr/share/dotnet/dotnet
@@ -42,8 +42,7 @@
     - dotnet
 
 - name: Verify dotnet installation for Jenkins user
-  command: dotnet --version
-  become_user: "{{ jenkins_user }}"
+  command: sudo -u {{ jenkins_user }} dotnet --version
   register: dotnet_check
   changed_when: false
   tags:

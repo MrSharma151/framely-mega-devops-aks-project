@@ -38,8 +38,9 @@
     - kustomize
 
 - name: Verify Kustomize installation for Jenkins user
-  command: kustomize version --short
-  become_user: "{{ jenkins_user }}"
+  command: sudo -u {{ jenkins_user }} kustomize version
+  args:
+    chdir: /tmp
   register: kustomize_check
   changed_when: false
   tags:

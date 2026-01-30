@@ -29,10 +29,8 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
         error "❌ No registry configuration found for environment: ${ENVIRONMENT}"
     }
 
-    // Export registry details for docker.groovy
-    env.REGISTRY_URL            = registry.registryUrl
-    env.REPOSITORY_PREFIX       = registry.repositoryPrefix
-    env.REGISTRY_CREDENTIALS_ID = registry.credentialsId
+    // Export ONLY required registry detail for docker.groovy
+    env.REGISTRY_URL = registry.registryUrl
 
     // --------------------------------------------------
     // Resolve environment-specific frontend build values
@@ -56,7 +54,6 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     echo " STAGE PIPELINE :: CI + GITOPS DELIVERY"
     echo " Environment        : ${ENVIRONMENT}"
     echo " Registry URL       : ${env.REGISTRY_URL}"
-    echo " Repository Prefix  : ${env.REPOSITORY_PREFIX}"
     echo " Frontend API URL   : ${STAGE_API_BASE_URL}"
     echo " Security Policy    : Trivy REPORT-ONLY"
     echo " Responsibilities:"

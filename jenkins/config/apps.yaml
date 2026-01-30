@@ -6,10 +6,11 @@ apps:
     type: backend
     path: apps/backend
 
-    # Backend uses runtime environment variables only.
-    # No build-time arguments are required.
-    # Configuration is injected via Kubernetes manifests.
-    
+    # Backend uses ONLY runtime configuration.
+    # - No build-time arguments
+    # - Environment-specific values injected via Kubernetes manifests
+    # - Image remains fully environment-agnostic
+
 
   # --------------------------------------------------------------------
   # Admin Frontend Application (Next.js)
@@ -18,15 +19,14 @@ apps:
     type: frontend
     path: apps/frontend-admin
 
-    # Test and security commands executed during CI
+    # CI commands
     testCommand: npm test
     securityCommand: npm audit --audit-level=high
 
-    # Build-time arguments for Next.js
-    # NOTE:
-    # - NEXT_PUBLIC_* variables are injected at BUILD TIME
-    # - basePath is NOT used (must remain unset as per app contract)
-    # - API base URL will be injected dynamically per environment
+    # Build-time arguments (Next.js)
+    # - NEXT_PUBLIC_* injected at BUILD TIME
+    # - Application runs at root path (/)
+    # - Domain and routing handled via Ingress (subdomain-based)
     buildArgs:
       NEXT_PUBLIC_API_BASE_URL: __API_BASE_URL__
 
@@ -38,13 +38,12 @@ apps:
     type: frontend
     path: apps/frontend-customer
 
-    # Test and security commands executed during CI
+    # CI commands
     testCommand: npm test
     securityCommand: npm audit --audit-level=high
 
-    # Build-time arguments for Next.js
-    # NOTE:
-    # - basePath is NOT used
-    # - API base URL is environment-specific
+    # Build-time arguments (Next.js)
+    # - No basePath usage
+    # - API endpoint injected per environment
     buildArgs:
       NEXT_PUBLIC_API_BASE_URL: __API_BASE_URL__

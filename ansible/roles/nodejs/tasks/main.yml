@@ -23,16 +23,14 @@
     - nodejs
 
 - name: Verify Node.js installation for Jenkins user
-  command: node --version
-  become_user: "{{ jenkins_user }}"
+  command: sudo -u {{ jenkins_user }} node --version
   register: node_check
   changed_when: false
   tags:
     - nodejs
 
 - name: Verify npm installation for Jenkins user
-  command: npm --version
-  become_user: "{{ jenkins_user }}"
+  command: sudo -u {{ jenkins_user }} npm --version
   register: npm_check
   changed_when: false
   tags:

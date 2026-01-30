@@ -12,13 +12,13 @@
 # - Registry details are resolved via `registries.yaml`
 # - Jenkins constructs the final image reference at runtime as:
 #
-#     <registryUrl>/<repositoryPrefix>/<image-name>:<tag>
+#     <registryUrl>/<image-name>:<tag>
 #
 # CURRENT STATE:
-# - Images are built and pushed to Docker Hub
+# - Images can be pushed to Docker Hub or Azure ACR
 #
 # FUTURE STATE:
-# - Same image names will be reused with Azure Container Registry (ACR)
+# - Same image names reused across all registries
 # - No changes required in pipelines or GitOps logic
 # ======================================================================
 
@@ -28,11 +28,11 @@ images:
   # --------------------------------------------------------------------
   backend: framely-backend
   #
-  # Example (CURRENT – Docker Hub):
+  # Example (Docker Hub):
   # docker.io/mrsharma151/framely-backend:v1.0.0
   #
-  # Example (FUTURE – Azure ACR):
-  # framelystage.azurecr.io/framely/framely-backend:v1.0.0
+  # Example (Azure ACR):
+  # acrframelystage.azurecr.io/framely-backend:v1.0.0
 
 
   # --------------------------------------------------------------------
@@ -40,11 +40,11 @@ images:
   # --------------------------------------------------------------------
   frontend-admin: framely-frontend-admin
   #
-  # Example (CURRENT – Docker Hub):
+  # Example (Docker Hub):
   # docker.io/mrsharma151/framely-frontend-admin:v1.0.0
   #
-  # Example (FUTURE – Azure ACR):
-  # framelystage.azurecr.io/framely/framely-frontend-admin:v1.0.0
+  # Example (Azure ACR):
+  # acrframelystage.azurecr.io/framely-frontend-admin:v1.0.0
 
 
   # --------------------------------------------------------------------
@@ -52,8 +52,8 @@ images:
   # --------------------------------------------------------------------
   frontend-customer: framely-frontend-customer
   #
-  # Example (CURRENT – Docker Hub):
+  # Example (Docker Hub):
   # docker.io/mrsharma151/framely-frontend-customer:v1.0.0
   #
-  # Example (FUTURE – Azure ACR):
-  # framelystage.azurecr.io/framely/framely-frontend-customer:v1.0.0
+  # Example (Azure ACR):
+  # acrframelystage.azurecr.io/framely-frontend-customer:v1.0.0

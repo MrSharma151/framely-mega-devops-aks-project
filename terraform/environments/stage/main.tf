@@ -219,3 +219,17 @@ module "jenkins_vm" {
 #   aks_kubelet_identity_object_id = module.aks.kubelet_identity_object_id
 #   aks_identity_object_id         = module.aks.identity_object_id
 # }
+
+
+# ------------------------------------------------------------
+# TEMP: Jenkins VM → ACR (AcrPush)
+# ------------------------------------------------------------
+# This is intentionally defined inline while AKS is disabled.
+# It will be moved to identities module after AKS is enabled.
+# ------------------------------------------------------------
+resource "azurerm_role_assignment" "jenkins_acr_push" {
+  scope                = module.acr.id
+  role_definition_name = "AcrPush"
+  principal_id         = module.jenkins_vm.identity_principal_id
+}
+
