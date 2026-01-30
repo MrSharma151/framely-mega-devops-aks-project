@@ -141,6 +141,11 @@ resource "azurerm_linux_virtual_machine" "this" {
     public_key = var.ssh_public_key
   }
 
+  # Managed Identity for the VM
+  identity {
+    type = "SystemAssigned"
+  }
+
   # OS disk configuration
   os_disk {
     caching              = "ReadWrite"

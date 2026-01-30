@@ -1,41 +1,33 @@
 ---
-# ============================================
-# Jenkins Installation Tasks
-# ============================================
+# =========================================================
+# Jenkins Installation (ENTERPRISE SAFE)
+# No APT repo, No GPG loops
+# =========================================================
 
-- name: Install Java (OpenJDK 17) required for Jenkins
+- name: Install Java (OpenJDK 17)
   apt:
-    name: "{{ java_package }}"
+    name: openjdk-17-jdk
     state: present
-  tags:
-    - jenkins
-    - java
-
-- name: Add Jenkins official GPG key
-  apt_key:
-    url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
-    state: present
-  tags:
-    - jenkins
-
-- name: Add Jenkins official APT repository
-  apt_repository:
-    repo: deb https://pkg.jenkins.io/debian-stable binary/
-    state: present
-    filename: jenkins
-  tags:
-    - jenkins
-
-- name: Update apt cache after adding Jenkins repository
-  apt:
     update_cache: yes
-  tags:
-    - jenkins
+  tags: [jenkins]
 
-- name: Install Jenkins (LTS)
+# ---------------------------------------------------------
+# Download Jenkins LTS .deb (OFFICIAL)
+# ---------------------------------------------------------
+
+- name: Download Jenkins LTS deb package
+  get_url:
+    url: https://pkg.jenkins.io/debian-stable/binary/jenkins_2.479.1_all.deb
+    dest: /tmp/jenkins.deb
+    mode: '0644'
+  tags: [jenkins]
+
+# ---------------------------------------------------------
+# Install Jenkins from deb (NO repo involved)
+# ---------------------------------------------------------
+
+- name: Install Jenkins from deb package
   apt:
-    name: jenkins
-    state: present
+    deb: /tmp/jenkins.deb
   notify: Restart Jenkins
-  tags:
-    - jenkins
+  tags: [jenkins]

@@ -38,3 +38,42 @@
   tags:
     - common
     - base
+
+# ============================================
+# Azure CLI Installation
+# Purpose:
+#   - Required for Jenkins VM Managed Identity login
+#   - Used for ACR authentication (az acr login)
+# ============================================
+
+- name: Add Microsoft GPG key for Azure CLI
+  apt_key:
+    url: https://packages.microsoft.com/keys/microsoft.asc
+    state: present
+  tags:
+    - common
+    - azure-cli
+
+- name: Add Azure CLI APT repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ {{ ansible_lsb.codename }} main"
+    state: present
+    filename: azure-cli
+  tags:
+    - common
+    - azure-cli
+
+- name: Update apt cache after adding Azure CLI repo
+  apt:
+    update_cache: yes
+  tags:
+    - common
+    - azure-cli
+
+- name: Install Azure CLI
+  apt:
+    name: azure-cli
+    state: present
+  tags:
+    - common
+    - azure-cli

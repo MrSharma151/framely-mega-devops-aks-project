@@ -46,3 +46,20 @@ resource "azurerm_role_assignment" "aks_keyvault_reader" {
   # Object ID of the AKS Managed Identity
   principal_id = var.aks_identity_object_id
 }
+
+# ------------------------------------------------------------
+# Jenkins VM → ACR (AcrPush)
+# ------------------------------------------------------------
+# Allows Jenkins VM to push Docker images to ACR
+# using System Assigned Managed Identity (no secrets).
+resource "azurerm_role_assignment" "jenkins_acr_push" {
+
+  # Scope is the Azure Container Registry
+  scope = var.acr_id
+
+  # Built-in role for pushing images
+  role_definition_name = "AcrPush"
+
+  # Object ID of Jenkins VM Managed Identity
+  principal_id = var.jenkins_identity_principal_id
+}

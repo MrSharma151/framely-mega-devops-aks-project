@@ -6,7 +6,7 @@
  Purpose:
  - Build Docker images using locked Dockerfiles
  - Optionally push images to a container registry
- - Support Docker Hub now and Azure ACR in future
+ - Support Azure ACR using Managed Identity
 ========================================================================
 */
 
@@ -21,7 +21,7 @@ def build(app, imagesConfig, pushImage = false) {
         echo "--------------------------------------------------"
 
         // --------------------------------------------------
-        // Resolve image name (logical name only)
+        // Resolve logical image name
         // --------------------------------------------------
         def imageName = imagesConfig.images[app.name]
         if (!imageName) {
@@ -44,28 +44,24 @@ def build(app, imagesConfig, pushImage = false) {
         def imageTag = "${appVersion}-${gitSha}"
 
         // --------------------------------------------------
-        // Resolve registry details (ONLY REQUIRED WHEN PUSHING)
+        // Resolve registry details (ONLY WHEN PUSHING)
         // --------------------------------------------------
-        def registryUrl      = env.REGISTRY_URL
-        def repositoryPrefix = env.REPOSITORY_PREFIX
-        def credentialsId    = env.REGISTRY_CREDENTIALS_ID
+        def registryUrl = env.REGISTRY_URL
 
-        if (pushImage) {
-            if (!registryUrl || !repositoryPrefix || !credentialsId) {
-                error """
-❌ Registry configuration not found in environment.
+        if (pushImage && !registryUrl) {
+            error """
+❌ Registry URL not found.
 
 Ensure Jenkins pipeline exports:
 - REGISTRY_URL
-- REPOSITORY_PREFIX
-- REGISTRY_CREDENTIALS_ID
 """
-            }
         }
 
-        // Build full image name
+        // --------------------------------------------------
+        // Build full image reference
+        // --------------------------------------------------
         def fullImageName = pushImage
-            ? "${registryUrl}/${repositoryPrefix}/${imageName}:${imageTag}"
+            ? "${registryUrl}/${imageName}:${imageTag}"
             : "${imageName}:${imageTag}"
 
         // --------------------------------------------------
@@ -77,7 +73,6 @@ Ensure Jenkins pipeline exports:
             echo "Injecting frontend build-time arguments"
 
             app.buildArgs.each { key, value ->
-                // Allow placeholders for verification builds (main branch)
                 if (pushImage && value.startsWith("__")) {
                     error "❌ Unresolved build argument placeholder: ${key}=${value}"
                 }
@@ -97,26 +92,17 @@ Ensure Jenkins pipeline exports:
                 """
 
                 // --------------------------------------------------
-                // Docker push (optional)
+                // Docker push (ACR via Managed Identity)
                 // --------------------------------------------------
                 if (pushImage) {
 
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: credentialsId,
-                            usernameVariable: 'REGISTRY_USER',
-                            passwordVariable: 'REGISTRY_PASS'
-                        )
-                    ]) {
+                    echo "Authenticating to Azure using Managed Identity"
+                    sh "az login --identity"
 
-                        sh """
-                            echo "\$REGISTRY_PASS" | docker login ${registryUrl} \
-                              -u "\$REGISTRY_USER" --password-stdin
-                        """
+                    echo "Logging in to Azure Container Registry"
+                    sh "az acr login --name ${registryUrl.split('\\.')[0]}"
 
-                        sh "docker push ${fullImageName}"
-                        sh "docker logout ${registryUrl}"
-                    }
+                    sh "docker push ${fullImageName}"
 
                 } else {
                     echo "Docker image built successfully (verification only)"
@@ -136,13 +122,10 @@ Please review the logs above to identify the root cause.
         }
 
         // --------------------------------------------------
-        // Expose built image details to downstream steps
-        // IMPORTANT:
-        // - name MUST NOT contain tag
-        // - tag is stored separately for GitOps (Kustomize)
+        // Expose built image details for GitOps
         // --------------------------------------------------
         def imageWithoutTag = pushImage
-            ? "${registryUrl}/${repositoryPrefix}/${imageName}"
+            ? "${registryUrl}/${imageName}"
             : "${imageName}"
 
         app.builtImage = [
@@ -151,7 +134,6 @@ Please review the logs above to identify the root cause.
         ]
 
         echo "✅ Image ready: ${imageWithoutTag}:${imageTag}"
-
     }
 }
 
