@@ -32,6 +32,9 @@ images:
 - name: acrframelystage.azurecr.io/framely-backend
   newName: acrframelystage.azurecr.io/framely-backend
   newTag: 0.1.0-91419aa
+- name: acrframelystage.azurecr.io/framely-frontend-admin
+  newName: acrframelystage.azurecr.io/framely-frontend-admin
+  newTag: 0.1.0-91419aa
 - name: docker.io/mrsharma151/framely-backend
   newName: docker.io/mrsharma151/framely-backend
   newTag: 0.1.0-bf3b873
