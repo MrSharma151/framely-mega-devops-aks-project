@@ -39,8 +39,9 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     // --------------------------------------------------
     // NOTE:
     // apps.yaml remains environment-agnostic.
-    // PROD URL should match real production ingress/domain.
-    def PROD_API_BASE_URL = "https://api.framely.in/api/v1"
+    // PROD API URL (pipeline testing only – infra not live yet)
+    def PROD_API_BASE_URL = "http://localhost:8081/api/v1"
+
 
     APPS_CONFIG.apps.each { app ->
         if (app.type == 'frontend' && app.buildArgs) {
