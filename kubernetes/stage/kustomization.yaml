@@ -37,7 +37,7 @@ resources:
 images:
 - name: framely-backend
   newName: acrframelystage.azurecr.io/framely-backend
-  newTag: 0.1.0-30e7d8f
+  newTag: 0.1.0-723cad8
 - name: framely-frontend-admin
   newName: acrframelystage.azurecr.io/framely-frontend-admin
   newTag: 0.1.0-30e7d8f
