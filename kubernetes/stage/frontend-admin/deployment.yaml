@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: frontend-admin
-          image: framely/frontend-admin:latest
+          image: framely-frontend-admin:latest
           # Image tag is updated via Kustomize (GitOps / Jenkins)
 
           ports:

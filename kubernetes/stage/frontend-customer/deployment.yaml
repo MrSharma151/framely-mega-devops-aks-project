@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: frontend-customer
-          image: framely/frontend-customer:latest
+          image: framely-frontend-customer:latest
           # Image tag is managed via Kustomize (GitOps / Jenkins)
 
           ports:

@@ -75,8 +75,7 @@
     - docker
 
 - name: Verify Docker is accessible by Jenkins user
-  command: docker ps
-  become_user: "{{ jenkins_user }}"
+  command: sudo -u {{ jenkins_user }} docker ps
   register: docker_test
   changed_when: false
   tags:
