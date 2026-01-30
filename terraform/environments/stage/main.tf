@@ -63,32 +63,38 @@ module "log_analytics" {
 
 
 # ------------------------------------------------------------
-# 4. AKS (Core Platform)
+# 4. AKS (Core Platform) - TEMPORARILY DISABLED
+# ------------------------------------------------------------
+# AKS provisioning is intentionally postponed until
+# Jenkins CI pipelines are fully validated.
+#
+# This avoids unnecessary AKS node costs during
+# Jenkins & CI debugging phase.
 # ------------------------------------------------------------
 
-module "aks" {
-  source = "../../modules/aks"
-
-  resource_group_name = module.resource_group.name
-  location            = var.location
-
-  cluster_name = "aks-framely-stage"
-  dns_prefix  = "framely-stage"
-
-  aks_subnet_id = module.network.aks_subnet_id
-  log_analytics_workspace_id = module.log_analytics.id
-
-  # System node pool
-  system_node_vm_size = "Standard_DS2_v2"
-  system_node_count  = 1
-
-  # User node pool
-  user_node_vm_size   = "Standard_DS2_v2"
-  user_node_min_count = 1
-  user_node_max_count = 3
-
-  tags = var.tags
-}
+# module "aks" {
+#   source = "../../modules/aks"
+#
+#   resource_group_name = module.resource_group.name
+#   location            = var.location
+#
+#   cluster_name = "aks-framely-stage"
+#   dns_prefix  = "framely-stage"
+#
+#   aks_subnet_id = module.network.aks_subnet_id
+#   log_analytics_workspace_id = module.log_analytics.id
+#
+#   # System node pool
+#   system_node_vm_size = "Standard_B2s"
+#   system_node_count  = 1
+#
+#   # User node pool
+#   user_node_vm_size   = "Standard_B2s"
+#   user_node_min_count = 1
+#   user_node_max_count = 3
+#
+#   tags = var.tags
+# }
 
 
 # ------------------------------------------------------------
@@ -198,15 +204,18 @@ module "jenkins_vm" {
 
 
 # ------------------------------------------------------------
-# 10. Identities (IAM Glue - LAST)
+# 10. Identities (IAM Glue) - TEMPORARILY DISABLED
+# ------------------------------------------------------------
+# This module depends on AKS identities.
+# It will be enabled AFTER AKS provisioning.
 # ------------------------------------------------------------
 
-module "identities" {
-  source = "../../modules/identities"
-
-  acr_id       = module.acr.id
-  key_vault_id = module.key_vault.id
-
-  aks_kubelet_identity_object_id = module.aks.kubelet_identity_object_id
-  aks_identity_object_id         = module.aks.identity_object_id
-}
+# module "identities" {
+#   source = "../../modules/identities"
+#
+#   acr_id       = module.acr.id
+#   key_vault_id = module.key_vault.id
+#
+#   aks_kubelet_identity_object_id = module.aks.kubelet_identity_object_id
+#   aks_identity_object_id         = module.aks.identity_object_id
+# }

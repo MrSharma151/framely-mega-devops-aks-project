@@ -8,45 +8,51 @@
 
 ## 🎯 Module Objective
 
-This Ansible module is responsible for **configuring a Jenkins CI server on an Azure Virtual Machine** for the **Framely – Mega DevOps AKS Project**.
+This Ansible module configures an **already provisioned Azure Virtual Machine** as a **production-ready Jenkins CI server** for the Framely Mega DevOps AKS Project.
 
-Its primary goal is to prepare the Jenkins VM with **all required CI, GitOps, and DevSecOps tooling**, ensuring the pipelines run **identically to the local development setup**, while maintaining:
+The objective of this module is to ensure that the Jenkins VM:
 
-* Complete environment parity (Local → Azure)
-* Deterministic and repeatable CI executions
-* Zero configuration drift
-* Production-ready CI infrastructure before AKS rollout
+* Has **all required CI, GitOps, and DevSecOps tooling installed**
+* Executes pipelines **identically to the local development environment**
+* Remains **fully reproducible and idempotent**
+* Is ready for **AKS-based delivery workflows** without manual intervention
 
 > ⚠️ **Important**
 > This module **does not provision infrastructure**.
-> All infrastructure resources are created **exclusively via Terraform**.
+> All Azure resources (VM, networking, AKS, ACR, etc.) are created **exclusively using Terraform**.
 
 ---
 
 ## 🧱 Scope & Responsibilities
 
-### ✅ Responsibilities (What This Module Does)
+### ✅ In Scope
 
-* Configures an **already-provisioned Azure VM** as a Jenkins CI server
-* Installs all **required system-level tooling**
-* Ensures **full compatibility with the Jenkins system user**
-* Prepares the VM for:
+This module is responsible for:
+
+* Configuring an **existing Azure VM** as a Jenkins CI server
+* Installing **system-level dependencies** required by CI pipelines
+* Ensuring **tool accessibility for the Jenkins system user**
+* Preparing the VM for:
 
   * CI pipelines
   * GitOps-based image tag updates
-  * DevSecOps security scanning
+  * DevSecOps vulnerability scanning
 
-### ❌ Out of Scope (What This Module Does Not Do)
+---
 
-* Provision Azure infrastructure (VMs, networking, AKS, etc.)
+### ❌ Out of Scope
+
+This module explicitly **does not**:
+
+* Provision Azure infrastructure
 * Deploy applications
-* Execute `kubectl apply`
-* Interact with Kubernetes clusters
+* Run `kubectl apply`
+* Interact with Kubernetes or AKS
 * Configure Jenkins jobs, pipelines, or plugins
 
+> **Infrastructure → Terraform**
 > **CI → Jenkins**
 > **CD → ArgoCD**
-> **Infrastructure → Terraform**
 
 ---
 
@@ -62,7 +68,7 @@ Its primary goal is to prepare the Jenkins VM with **all required CI, GitOps, an
 | DevSecOps                   | Trivy     |
 | Container Orchestration     | AKS       |
 
-This strict separation reflects **real-world, production-grade DevOps architecture**.
+This separation is **intentional** and reflects **real-world enterprise DevOps architecture**.
 
 ---
 
@@ -91,27 +97,33 @@ ansible/
 
 ---
 
-## 🔧 Roles Breakdown
+## 🔧 Roles Overview
 
-Each role is **idempotent**, **self-contained**, and follows the **single-responsibility principle**.
+Each role is:
+
+* **Idempotent**
+* **Self-contained**
+* Focused on a **single responsibility**
+
+---
 
 ### 🔹 `common`
 
-Prepares the base operating system:
+Base OS preparation:
 
-* Updates system package cache
-* Installs essential OS utilities
+* Updates package cache
+* Installs essential system utilities
 * Enables HTTPS repositories and GPG support
 
 ---
 
 ### 🔹 `docker`
 
-Installs and configures Docker:
+Docker installation and configuration:
 
 * Docker Engine (official repository)
 * Docker CLI and containerd
-* Adds `jenkins` user to the `docker` group
+* Adds `jenkins` user to `docker` group
 * Enables Docker usage without `sudo`
 
 > Mandatory for all CI pipelines
@@ -120,53 +132,53 @@ Installs and configures Docker:
 
 ### 🔹 `jenkins`
 
-Installs and configures Jenkins:
+Jenkins runtime setup:
 
 * OpenJDK 17
-* Jenkins LTS
-* Jenkins system service
-* Ensures Jenkins runs under the `jenkins` system user
+* Jenkins LTS installation
+* Jenkins system service configuration
+* Ensures Jenkins runs as the `jenkins` system user
 
-> Plugin and job configuration is intentionally excluded
+> Jenkins plugins and jobs are **intentionally excluded**
 
 ---
 
 ### 🔹 `dotnet`
 
-Installs backend CI dependencies:
+Backend CI dependencies:
 
-* **.NET SDK 9.x**
-* Installed via official Microsoft installation script
-* Globally available for Jenkins pipelines
+* .NET SDK **9.x**
+* Installed using the official Microsoft installer
+* Available globally for Jenkins pipelines
 
 ---
 
 ### 🔹 `nodejs`
 
-Installs frontend CI dependencies:
+Frontend CI dependencies:
 
-* **Node.js 20.x**
+* Node.js **20.x**
 * npm (bundled)
-* Installed from the official NodeSource repository
+* Installed via the official NodeSource repository
 
 ---
 
 ### 🔹 `kustomize`
 
-Installs GitOps tooling:
+GitOps tooling:
 
 * Kustomize CLI (binary installation)
-* Used by Jenkins to update image tags in the GitOps repository
+* Used by Jenkins to update image tags in GitOps repositories
 
 ---
 
 ### 🔹 `trivy`
 
-Installs DevSecOps security tooling:
+DevSecOps security tooling:
 
 * Trivy CLI (official Aqua Security repository)
-* Performs container image vulnerability scanning
-* Enforces security gates within CI pipelines
+* Performs container image vulnerability scans
+* Enforces security gates in CI pipelines
 
 ---
 
@@ -174,11 +186,11 @@ Installs DevSecOps security tooling:
 
 Jenkins runs as a **non-root system user (`jenkins`)**.
 
-To ensure pipeline reliability:
+To guarantee pipeline reliability:
 
-* All tools are installed **globally**
+* All tools are installed **system-wide**
 * No user-specific installations (`nvm`, `~/.dotnet`, etc.)
-* Every tool is validated using:
+* Tool availability is validated using:
 
 ```bash
 sudo -u jenkins <tool> --version
@@ -213,11 +225,12 @@ jenkins-vm ansible_host=<JENKINS_VM_PUBLIC_IP>
 ansible-playbook playbooks/jenkins-vm-setup.yml
 ```
 
-✔ Safe to run multiple times (idempotent)
+* Safe to run multiple times
+* Fully idempotent
 
 ---
 
-### 3️⃣ Verify Tooling (MANDATORY)
+### 3️⃣ Verify Installation (Mandatory)
 
 ```bash
 chmod +x scripts/verify-jenkins-tool.sh
@@ -226,8 +239,8 @@ chmod +x scripts/verify-jenkins-tool.sh
 
 Successful execution confirms:
 
-* Jenkins VM is fully configured
-* CI, GitOps, and DevSecOps pipelines are ready to run
+* Jenkins VM is correctly configured
+* CI, GitOps, and DevSecOps tooling is ready
 
 ---
 
@@ -249,13 +262,12 @@ Successful execution confirms:
 ## 🏁 Final Notes
 
 * This module is **production-grade**
-* Closely mirrors enterprise CI environments
+* Mirrors enterprise CI server configurations
 * Designed for **seamless AKS migration**
-* Clean, minimal, and production-ready
+* Clean, deterministic, and reproducible
 
 > **Infrastructure may change.
 > CI logic remains constant.**
 
 ---
-
 

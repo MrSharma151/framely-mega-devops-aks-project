@@ -1,81 +1,88 @@
 
 
----
+# 📘 Terraform Infrastructure
 
-# 📘 Terraform Infrastructure – Framely Mega DevOps AKS Project
-
-## 📌 Overview
-
-This directory contains **all Terraform code** responsible for provisioning **Azure infrastructure** for the **Framely – Mega DevOps AKS Project**.
-
-Terraform provisions the **foundational platform** on Azure, while application delivery is handled via **CI (Jenkins)** and **CD (ArgoCD)** using strict GitOps principles.
-
-> **Terraform builds the platform**
-> **Jenkins performs CI and GitOps updates**
-> **ArgoCD is the only deployment engine**
-
-This separation of concerns is **intentional, production-aligned, and industry-grade**.
+## Framely – Mega DevOps AKS Project
 
 ---
 
-## 🎯 Scope of Terraform
+## 🎯 Purpose of This Directory
 
-Terraform is responsible for provisioning:
+This directory contains **all Terraform code** responsible for provisioning **Azure infrastructure** for the Framely platform.
+
+Terraform provisions the **foundational cloud platform**, while application delivery is handled separately through:
+
+* **CI:** Jenkins
+* **CD:** ArgoCD (GitOps)
+
+> Terraform builds infrastructure.
+> Jenkins produces artifacts and updates Git.
+> ArgoCD deploys declared state to Kubernetes.
+
+This separation of responsibilities is **intentional and production-aligned**.
+
+---
+
+## 🧱 Scope of Terraform
+
+Terraform is responsible for provisioning and managing:
 
 * Azure Resource Groups
-* Virtual Network, Subnets, and NSGs
-* AKS Cluster and Node Pools
+* Virtual Networks, Subnets, and Network Security Groups
+* Azure Kubernetes Service (AKS) clusters and node pools
 * Jenkins Virtual Machine (CI runner)
 * Azure Container Registry (ACR)
 * Azure Key Vault
-* Azure SQL Database
+* Azure SQL Server and Database
 * Azure Storage Account (Blob)
 * Log Analytics Workspace
-* Managed Identities and IAM
+* Managed Identities and role assignments
 
-### 🚫 What Terraform Does NOT Do
+---
 
-Terraform explicitly **does not**:
+### ❌ Out of Scope
 
-* Deploy applications
+Terraform explicitly does **not**:
+
+* Deploy application workloads
 * Apply Kubernetes manifests
 * Install Helm charts
-* Manage ArgoCD
-* Configure Jenkins (handled by Ansible)
-* Trigger from Jenkins pipelines (initial phase)
+* Configure or manage ArgoCD
+* Configure Jenkins (handled via Ansible)
+* Execute from Jenkins pipelines during the initial phase
 
-This guarantees:
+This ensures:
 
-* Safe infrastructure lifecycle
+* Predictable infrastructure lifecycle
 * Clean GitOps execution
-* Minimal blast radius
+* Reduced blast radius
 * Clear operational ownership
 
 ---
 
-## 🗂 Terraform Directory Structure
+## 📂 Directory Structure
 
-```
+```text
 terraform/
 ├── modules/                     # Reusable, environment-agnostic modules
-│   ├── resource-group/          # Azure Resource Group
+│   ├── resource-group/          # Azure Resource Groups
 │   ├── network/                 # VNet, Subnets, NSGs
-│   ├── aks/                     # AKS cluster & node pools
-│   ├── jenkins-vm/              # Jenkins CI Virtual Machine
+│   ├── aks/                     # AKS cluster and node pools
+│   ├── jenkins-vm/              # Jenkins CI virtual machine
 │   ├── acr/                     # Azure Container Registry
 │   ├── key-vault/               # Azure Key Vault
-│   ├── sql/                     # Azure SQL Server & Database
-│   ├── storage/                 # Storage Account & Blob containers
+│   ├── sql/                     # Azure SQL Server and Database
+│   ├── storage/                 # Storage Account and Blob containers
 │   ├── log-analytics/           # Log Analytics Workspace
-│   └── identities/              # Role assignments & IAM
+│   └── identities/              # IAM and role assignments
 │
-├── environments/                # Environment-specific wiring
+├── environments/                # Environment-specific composition
 │   ├── stage/
-│   │   ├── backend.tf           # Remote state config
+│   │   ├── backend.tf           # Remote state configuration
 │   │   ├── providers.tf
 │   │   ├── variables.tf
 │   │   ├── terraform.tfvars
-│   │   └── main.tf              # Module composition
+│   │   └── main.tf              # Module wiring
 │   │
 │   └── prod/
 │       ├── backend.tf
@@ -84,7 +91,7 @@ terraform/
 │       ├── terraform.tfvars
 │       └── main.tf
 │
-├── versions.tf                  # Terraform & provider version pinning
+├── versions.tf                  # Terraform and provider version pinning
 └── README.md
 ```
 
@@ -105,7 +112,7 @@ Each environment is:
 * Structurally identical
 * Independently manageable
 
-This mirrors **real production setups** and avoids cross-environment risk.
+This prevents cross-environment impact and mirrors real production setups.
 
 ---
 
@@ -113,122 +120,119 @@ This mirrors **real production setups** and avoids cross-environment risk.
 
 Terraform uses an **Azure Storage remote backend**.
 
-### Why Remote State?
+### Rationale
 
 * Prevents accidental state loss
 * Enables state locking
 * Required for safe collaboration
-* Production best practice
+* Standard production practice
 
 ### Backend Layout
 
-```
+```text
 Azure Storage Account
 └── Blob Container
     ├── stage/terraform.tfstate
     └── prod/terraform.tfstate
 ```
 
-> Backend infrastructure is bootstrapped once (manually or via temporary local state), which is a standard Terraform practice.
+Backend resources are bootstrapped once, which is standard Terraform practice.
 
 ---
 
 ## 🌐 Networking Architecture
 
-### Virtual Network (per environment)
+### Virtual Network
 
 * One VNet per environment
 * Example CIDR: `10.0.0.0/16`
 
-### Subnets (Intentionally Minimal)
+### Subnet Design
 
-| Subnet              | Purpose              | Resources                    |
-| ------------------- | -------------------- | ---------------------------- |
-| `subnet-aks`        | Kubernetes workloads | AKS system & user node pools |
-| `subnet-jenkins-vm` | CI infrastructure    | Jenkins Virtual Machine      |
+| Subnet              | Purpose              | Resources                      |
+| ------------------- | -------------------- | ------------------------------ |
+| `subnet-aks`        | Kubernetes workloads | AKS system and user node pools |
+| `subnet-jenkins-vm` | CI infrastructure    | Jenkins virtual machine        |
 
-### Why Only Two Subnets?
+### Design Rationale
 
-* Clear separation between **Kubernetes** and **non-Kubernetes** compute
+* Clear separation between Kubernetes and non-Kubernetes compute
 * Simple security boundaries
-* Easier troubleshooting
+* Reduced operational complexity
 * Cost-aware design
 
-### What Is NOT Placed in Subnets
+### Excluded from Subnets
 
 * Azure SQL Database
 * Storage Account
 * Key Vault
 
-**Reason:**
-
-* Public endpoints with firewall restrictions
-* Lower cost
-* Reduced complexity
-* Private endpoints intentionally deferred as future enhancement
+These services use public endpoints with firewall restrictions.
+Private endpoints are intentionally deferred.
 
 ---
 
 ## ☸️ AKS Architecture
 
-### AKS Cluster
+### Cluster Design
 
-* One cluster per environment
+* One AKS cluster per environment
 * Azure CNI networking
-* System Assigned Managed Identity
+* System-assigned managed identity
 * Integrated with Log Analytics
 
 ### Node Pools
 
-#### System Node Pool
+**System Node Pool**
 
-* Hosts Kubernetes control components
-* Small and fixed-size
+* Hosts Kubernetes system components
+* Fixed size
 * Autoscaling disabled
 
-#### User Node Pool
+**User Node Pool**
 
-* Hosts Framely applications
+* Hosts application workloads
 * Autoscaling enabled
 * Cost-controlled limits
 
-> Node pools are intentionally not over-segmented.
+Node pools are intentionally not over-segmented.
 
 ---
 
-## 🖥 Jenkins Virtual Machine (CI Layer)
+## 🖥 Jenkins Virtual Machine
 
 ### Purpose
 
-Jenkins runs on a **dedicated Azure Virtual Machine**, outside the AKS cluster.
+Jenkins runs on a **dedicated Azure VM**, outside the AKS cluster.
 
-This enforces a **clean separation between CI and runtime environments**.
+This enforces a strict separation between:
+
+* CI execution
+* Application runtime environments
 
 ### Responsibilities
 
-Jenkins:
+Jenkins performs:
 
-* Runs tests
-* Performs security scans
-* Builds Docker images
-* Pushes images to ACR
-* Updates GitOps manifests via Git commits
+* Test execution
+* Security scanning
+* Docker image builds
+* Image pushes to ACR
+* GitOps manifest updates via Git commits
 
-Jenkins **does NOT**:
+Jenkins does **not**:
 
-* Deploy to Kubernetes
-* Run `kubectl`
+* Deploy workloads
+* Execute `kubectl`
 * Interact directly with AKS
 
-### Design Characteristics
+### Characteristics
 
-* VM Size: Cost-optimized (`Standard_B2s`)
+* VM size: Cost-optimized
 * OS: Ubuntu LTS
-* Subnet: `subnet-jenkins-vm`
+* Network: `subnet-jenkins-vm`
 * Public IP: Enabled with restricted NSG
-* Configuration: Managed via **Ansible (outside Terraform)**
-
-This reflects **real-world CI architecture**, not demo setups.
+* Configuration: Managed via **Ansible**
 
 ---
 
@@ -236,8 +240,8 @@ This reflects **real-world CI architecture**, not demo setups.
 
 ### Purpose
 
-* Central image registry
-* Supports immutable image tagging
+* Central container image registry
+* Immutable image tagging
 * Shared by Jenkins and AKS
 
 ### Access Model
@@ -245,18 +249,18 @@ This reflects **real-world CI architecture**, not demo setups.
 | Actor   | Access                           |
 | ------- | -------------------------------- |
 | Jenkins | Push images                      |
-| AKS     | Pull images via Managed Identity |
+| AKS     | Pull images via managed identity |
 
 No admin user is enabled.
-No secrets are stored in Terraform.
+No registry credentials are stored in Terraform.
 
 ---
 
-## 🔑 Identity & Access Management
+## 🔑 Identity and Access Management
 
 ### Managed Identity Strategy
 
-* AKS uses **System Assigned Managed Identity**
+* AKS uses system-assigned managed identity
 * Role assignments managed via Terraform:
 
   * `AcrPull` on ACR
@@ -272,15 +276,14 @@ This avoids secrets and aligns with Azure best practices.
 ### Purpose
 
 * Centralized infrastructure secret store
-* Secure storage for credentials and keys
 
 ### Usage Model
 
-* Terraform provisions Key Vault
-* Secrets may be added later
-* Applications still consume secrets via Kubernetes Secrets
+* Key Vault is provisioned via Terraform
+* Secrets may be added post-provisioning
+* Applications consume secrets via Kubernetes Secrets
 
-> CSI Driver integration is a planned future enhancement.
+CSI driver integration is deferred for future enhancement.
 
 ---
 
@@ -288,7 +291,7 @@ This avoids secrets and aligns with Azure best practices.
 
 ### Design
 
-* Azure SQL Server + Single Database
+* Azure SQL Server with a single database
 * Cost-optimized tier
 * Public endpoint with firewall restrictions
 
@@ -296,21 +299,21 @@ Private endpoints are intentionally deferred.
 
 ---
 
-## 🧺 Storage Account (Blob)
+## 🧺 Azure Storage Account (Blob)
 
 ### Purpose
 
 * Application file storage
 * Media uploads and exports
 
-### Access
+### Access Model
 
 * Connection strings (current)
-* Managed Identity (future)
+* Managed identity (future)
 
 ---
 
-## 📊 Observability
+## 📊 Observability Integration
 
 ### Log Analytics Workspace
 
@@ -318,7 +321,7 @@ Private endpoints are intentionally deferred.
 * Cluster and node monitoring
 * Infrastructure diagnostics
 
-Application metrics are handled separately via Prometheus & Grafana.
+Application metrics are handled separately via Prometheus and Grafana.
 
 ---
 
@@ -326,33 +329,31 @@ Application metrics are handled separately via Prometheus & Grafana.
 
 This Terraform architecture prioritizes:
 
-* Clarity over cleverness
-* Predictability over abstraction
+* Clarity over abstraction
+* Predictability over flexibility
 * Cost awareness
 * Production realism
 
-Over-engineering is **intentionally avoided**.
+Over-engineering is intentionally avoided.
 
 ---
 
-## 🚀 Execution Plan
+## 🚀 Execution Strategy
 
-1. Fully provision **Stage** infrastructure
+1. Provision **Stage** infrastructure
 2. Validate CI → GitOps → ArgoCD → AKS flow
-3. Implement **Prod** Terraform code
-4. Do **not** provision Prod to avoid unnecessary cost
+3. Maintain **Prod** configuration parity
+4. Avoid provisioning Prod to control cost
 
 ---
 
-## 🏁 Final Statement
+## 🏁 Final Notes
 
-This Terraform setup reflects **how real DevOps teams design infrastructure**:
+* Infrastructure is fully defined as code
+* Clear separation of concerns is enforced
+* GitOps-native application delivery is preserved
+* Foundations are secure, minimal, and scalable
 
-* Infrastructure as Code
-* GitOps-native application delivery
-* Strong separation of concerns
-* Secure, minimal, and scalable foundations
+This directory defines the **authoritative Azure infrastructure model** for the Framely platform.
 
 ---
-
-

@@ -1,28 +1,25 @@
 
 
----
+# 🧩 Framely Applications
 
-# 🧩 Framely Applications – Source of Truth
+This directory contains **all application services** for the Framely platform.
+It is the **authoritative source of truth** for:
 
-This directory contains **all application services** of the Framely platform.
-It serves as the **single source of truth** for:
-
-* Application responsibilities
-* Docker images & Dockerfiles
-* Runtime environment variables
-* Service boundaries
+* Application responsibilities and boundaries
+* Docker images and Dockerfiles
+* Runtime configuration contracts
 * Kubernetes (AKS) readiness assumptions
 
-This directory is **finalized and stable**.
-No structural or architectural changes are expected here.
+The application structure is **finalized and stable**.
+No architectural or structural changes are expected in this directory.
 
 ---
 
-## 📂 Applications Overview
+## 📂 Directory Structure
 
-```bash
+```text
 apps/
-├── README.md                # This document (source of truth)
+├── README.md                # Application-level documentation (this file)
 ├── docker-compose.yml       # Local orchestration (development & validation only)
 ├── backend                  # ASP.NET Core Backend API
 ├── frontend-admin           # Admin Dashboard (Next.js)
@@ -31,120 +28,120 @@ apps/
 
 ---
 
-## 🧱 Services & Responsibilities
+## 🧱 Services Overview
 
-### 🧠 Backend API (`apps/backend`)
+### Backend API (`apps/backend`)
 
 **Type:** ASP.NET Core API
-**Role:** Central business & data service (single source of truth)
+**Role:** Central business and data service (single source of truth)
 
 **Responsibilities**
 
-* Authentication & authorization (JWT + Roles)
-* User, product, category & order management
-* Database access via Entity Framework Core
-* Blob / file storage integration
-* CORS enforcement for frontend apps
+* Authentication and authorization (JWT, role-based access)
+* User, product, category, and order management
+* Database access using Entity Framework Core
+* Blob/file storage integration
+* CORS enforcement for frontend clients
 
-**Key Characteristics**
+**Characteristics**
 
 * Stateless
 * Database-driven
-* Safe for restarts
-* Idempotent startup (migrations + role seeding)
+* Restart-safe
+* Idempotent startup (migrations and role seeding)
 
-**Docker**
+**Containerization**
 
 * Multi-stage Dockerfile
 * Non-root runtime user
 * Production-ready image
 
-📘 Detailed reference: `apps/backend/README.md`
+📘 See: `apps/backend/README.md`
 
 ---
 
-### 🛍️ Frontend – Customer (`apps/frontend-customer`)
+### Frontend – Customer (`apps/frontend-customer`)
 
 **Type:** Next.js (App Router)
 **Role:** Public customer-facing storefront
 
 **Responsibilities**
 
-* Product browsing & search
+* Product browsing and search
 * User authentication
-* Cart & checkout flow
-* Order history & tracking
+* Cart and checkout flow
+* Order history and tracking
 
-**Key Characteristics**
+**Characteristics**
 
 * Fully stateless
 * Consumes backend APIs only
 * No direct database access
-* CDN / Ingress friendly
+* CDN and ingress friendly
 
-**Docker**
+**Containerization**
 
 * Next.js standalone build
-* Build-time environment injection
+* Build-time environment variable injection
 * Minimal runtime image
 * Non-root container execution
 
-📘 Detailed reference: `apps/frontend-customer/README.md`
+📘 See: `apps/frontend-customer/README.md`
 
 ---
 
-### 🧑‍💼 Frontend – Admin (`apps/frontend-admin`)
+### Frontend – Admin (`apps/frontend-admin`)
 
 **Type:** Next.js (App Router)
-**Role:** Internal admin dashboard
+**Role:** Internal administrative dashboard
 
 **Responsibilities**
 
-* Product & category management
+* Product and category management
 * Order management
-* Admin-only operations
-* Role-protected UI
+* Administrative workflows
+* Role-protected UI access
 
-**Key Characteristics**
+**Characteristics**
 
 * Fully stateless
 * Admin-only access
 * Consumes backend APIs only
 
-**Docker**
+**Containerization**
 
 * Next.js standalone build
-* Build-time environment injection
+* Build-time environment variable injection
 * Minimal runtime image
 * Non-root container execution
 
-📘 Detailed reference: `apps/frontend-admin/README.md`
+📘 See: `apps/frontend-admin/README.md`
 
 ---
 
-## 🐳 Docker & Image Contracts
+## 🐳 Docker Image Contracts
 
 Each application:
 
 * Has **exactly one Dockerfile**
-* Builds a **single immutable image**
-* Receives configuration **only via environment variables**
+* Builds a **single immutable container image**
+* Receives configuration **only through environment variables**
 
-Dockerfiles are:
+All Dockerfiles are:
 
 * Production-grade
-* AKS-ready
-* **Frozen** (no future changes expected)
+* Kubernetes (AKS) ready
+* Considered **frozen** (no functional changes expected)
 
 ---
 
-## ⚙️ Environment Variable Contracts (CRITICAL)
+## ⚙️ Environment Variable Contracts (Critical)
 
-This section defines the **stable configuration contract** for all apps.
+This section defines the **stable runtime configuration contract** for all services.
 
 ---
 
-### 🔐 Backend Environment Variables
+### Backend Environment Variables
 
 | Variable                               | Required | Description                |
 | -------------------------------------- | -------- | -------------------------- |
@@ -162,57 +159,61 @@ This section defines the **stable configuration contract** for all apps.
 | `Storage__Name`                        | ✅        | Storage account name       |
 | `Storage__Key`                         | ✅        | Storage access key         |
 
-📌 **Rules**
+**Rules**
 
-* Secrets → Kubernetes Secrets
-* Non-sensitive → ConfigMaps
-* No defaults assumed in production
+* Secrets must be stored in **Kubernetes Secrets**
+* Non-sensitive values must be stored in **ConfigMaps**
+* No production defaults are assumed
 
 ---
 
-### 🌐 Frontend Environment Variables (Customer & Admin)
+### Frontend Environment Variables
+
+(Customer and Admin)
 
 | Variable                   | Required | Description                   |
 | -------------------------- | -------- | ----------------------------- |
 | `NEXT_PUBLIC_API_BASE_URL` | ✅        | Backend API base URL          |
 | `NEXT_PUBLIC_BASE_PATH`    | ❌        | Local path-based routing only |
 
-⚠️ **Important**
+**Notes**
 
-* `NEXT_PUBLIC_*` variables are **build-time**
-* Any change requires a **new image build**
-* This behavior is intentional and expected
+* `NEXT_PUBLIC_*` variables are **build-time values**
+* Any change requires a **new container image**
+* This behavior is intentional and enforced
 
 ---
 
 ## 🧪 docker-compose.yml (Local Validation Only)
 
-`apps/docker-compose.yml` exists to:
+`apps/docker-compose.yml` is used exclusively for **local development and validation**.
 
-* Validate service integration
-* Test environment variable contracts
-* Run the complete system locally
+It allows:
 
-It is **NOT** used in production or Kubernetes.
+* End-to-end service integration testing
+* Validation of environment variable contracts
+* Running the complete system on a single machine
 
-What it provides:
+It is **not used** in Kubernetes or production environments.
 
-* SQL Server container (local only)
+Services included:
+
+* SQL Server (local only)
 * Backend API
 * Customer frontend
 * Admin frontend
 
 ---
 
-## 🧠 Design Rules (Non-Negotiable)
+## 🧠 Design Constraints (Non-Negotiable)
 
-1️⃣ **Applications are stateless**
-2️⃣ **No configuration inside images**
-3️⃣ **Database & storage are external**
-4️⃣ **Environment variables are the contract**
-5️⃣ **Same image runs in all environments**
+1. Applications are **stateless**
+2. No configuration is baked into container images
+3. Databases and storage are external dependencies
+4. Environment variables define the runtime contract
+5. The **same image runs across all environments**
 
-These rules are already enforced by the codebase.
+These constraints are already enforced in the codebase.
 
 ---
 
@@ -220,26 +221,26 @@ These rules are already enforced by the codebase.
 
 * Backend:
 
-  * Unit & integration tests
-* Frontends:
+  * Unit tests
+  * Integration tests
+* Frontend:
 
-  * Jest unit & component tests
+  * Jest-based unit and component tests
 * CI:
 
-  * Tests run before image build
+  * Tests executed before image build
 * CD:
 
-  * Only tested images are deployed
+  * Only validated images are promoted
 
 ---
 
 ## 🏁 Final Notes
 
-* This `apps/` directory is **finalized**
-* It represents a **production-grade application layer**
+* The `apps/` directory is **finalized**
+* Represents a **production-grade application layer**
+* Safe to use as long-term technical documentation
 * No re-architecture or refactor is expected
-* Safe to use as **long-term documentation**
 
 ---
-
 

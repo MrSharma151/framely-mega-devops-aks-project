@@ -1,127 +1,106 @@
 
 
----
+# 📘 Local Development Setup
 
-# 📘 Local Development Setup – Framely DevOps AKS Mega Project
+## Framely – Mega DevOps AKS Project
 
-**(FINAL – Single Source of Truth)**
+**Run the entire project on a single Linux machine (without AKS)**
 
 ---
 
 ## 🎯 Purpose of This Document
 
-This document explains how to set up the **entire Framely platform locally** using **KIND (Kubernetes in Docker)** to perform **end-to-end CI/CD + GitOps + DevSecOps validation** **before migrating to AKS**.
+This document explains **how to run and validate the complete Framely Mega DevOps Project locally** on **one Linux machine**, **without using Azure AKS**.
 
-It is intended for:
+After following this guide, you will be able to:
 
-* Local development & validation
-* Jenkins multibranch CI/CD testing
-* GitOps (ArgoCD + Kustomize) verification
-* DevSecOps validation (Trivy-based image scanning)
-* New contributors onboarding
+* Prepare a Linux system with all required tools
+* Run the Framely applications locally
+* Validate CI pipelines using Jenkins
+* Validate GitOps workflows using ArgoCD
+* Validate Kubernetes deployments using KIND
+* Test the same workflows that are later migrated to AKS
 
----
-
-## 🧠 Why Local Kubernetes First?
-
-Before provisioning Azure infrastructure, everything is validated locally to ensure:
-
-* Applications are container-ready
-* Dockerfiles are secure & reproducible
-* Jenkins pipelines work end-to-end
-* GitOps updates behave deterministically
-* DevSecOps gates work as expected
-* **Zero cloud cost during development**
-
-Later, this setup is migrated to **AKS** with **minimal changes**.
-
-> 👉 *Local failures are cheap. Cloud failures are expensive.*
+> This document focuses **only on local execution**.
+> **All implementation details, configuration values, repository URLs, and credentials are documented inside individual module `README.md` files.**
 
 ---
 
-## 🧰 Prerequisites (One-Time Setup)
+## 🧑‍💻 Supported Environment
 
-All tools must be installed on your **WSL2 Ubuntu / Linux system**.
+* OS: **Linux / WSL2 (Ubuntu recommended)**
+* CPU: 4 cores minimum
+* RAM: 8 GB minimum (16 GB recommended)
+* Disk: 30 GB free space
 
-> ⚠️ **CRITICAL: Jenkins User Constraint**
->
-> Jenkins runs as a **separate system user (`jenkins`)**.
-> Any tool used inside pipelines **must be installed globally** and accessible via `PATH` for the Jenkins user.
-
----
-
-## 🔹 Core Platform & DevOps Tools
-
-| Tool       | Purpose                                     |
-| ---------- | ------------------------------------------- |
-| Docker     | Container runtime                           |
-| kubectl    | Kubernetes CLI                              |
-| kind       | Local Kubernetes cluster                    |
-| Helm       | Kubernetes package manager                  |
-| Jenkins    | CI server (runs on host, not in Kubernetes) |
-| ArgoCD CLI | GitOps interaction                          |
-| Git        | Source control                              |
+> Windows / macOS users must use **WSL2 (Ubuntu)** or a Linux VM.
 
 ---
 
-## 🔹 CI / Build / Runtime Tooling (MANDATORY)
+## 🧰 Required Tools (Mandatory)
 
-These tools are **directly used by Jenkins pipelines**.
+All tools below **must be installed on the same Linux machine**.
 
-| Tool         | Purpose                                            | Requirement        |
-| ------------ | -------------------------------------------------- | ------------------ |
-| Docker CLI   | Image build & push                                 | **Global install** |
-| .NET SDK 9.x | Backend build & tests                              | **Global install** |
-| Node.js 20.x | Frontend build & tests (Next.js)                   | **Global install** |
-| npm          | Frontend dependency & test execution               | Comes with Node    |
-| Kustomize    | GitOps image updates                               | **Global install** |
-| Trivy        | Container image vulnerability scanning (DevSecOps) | **Global install** |
+### 🔹 Core Platform & DevOps Tooling
 
----
-
-## 🔐 Why Trivy Is Mandatory Now (DevSecOps)
-
-Trivy is used to scan **built Docker images** for vulnerabilities.
-
-**Role of Trivy in Framely pipelines:**
-
-* `main`  → report-only (developer feedback)
-* `stage` → enforced visibility (no failure)
-* `prod`  → **FAILS on CRITICAL vulnerabilities**
-
-> Jenkins **never fixes vulnerabilities**.
-> It **reports, enforces, and protects environments**.
-
-If Trivy is missing, **pipelines WILL FAIL**.
+| Tool           | Purpose                                |
+| -------------- | -------------------------------------- |
+| Git            | Source code management                 |
+| Docker Engine  | Container runtime                      |
+| Docker Compose | Local application testing              |
+| kubectl        | Kubernetes CLI                         |
+| KIND           | Local Kubernetes cluster               |
+| Helm           | Kubernetes package manager             |
+| Jenkins        | CI server (runs on host)               |
+| ArgoCD CLI     | GitOps interaction                     |
+| Kustomize      | GitOps image updates                   |
+| Trivy          | Container image vulnerability scanning |
 
 ---
 
-## 🔍 Verify Tool Installation (Host User)
+### 🔹 Application Build Tooling
 
-Run these commands as your normal Linux user:
+| Tool         | Purpose                        |
+| ------------ | ------------------------------ |
+| .NET SDK 9.x | Backend API build & tests      |
+| Node.js 20.x | Frontend builds                |
+| npm          | Frontend dependency management |
+
+---
+
+## ⚠️ Mandatory Jenkins Requirement
+
+Jenkins runs as a **dedicated system user (`jenkins`)**.
+
+All tools used in CI pipelines **must be installed globally** and accessible in the system `PATH` for the `jenkins` user.
+
+If any required tool is missing for the Jenkins user, **CI pipelines will fail**.
+
+---
+
+## 🔍 Verify Tool Installation
+
+Run as your normal Linux user:
 
 ```bash
-docker version
+git --version
+docker --version
+docker compose version
 kubectl version --client
 kind version
 helm version
-git --version
 argocd version --client
 kustomize version
 trivy version
-
 dotnet --version
 node --version
 npm --version
 ```
 
----
-
-## 🔍 Verify Jenkins User Access (CRITICAL)
-
-Run these exactly:
+Verify Jenkins user access:
 
 ```bash
+sudo -u jenkins git --version
 sudo -u jenkins docker ps
 sudo -u jenkins dotnet --version
 sudo -u jenkins node --version
@@ -130,48 +109,76 @@ sudo -u jenkins kustomize version
 sudo -u jenkins trivy version
 ```
 
-> ❌ If **any command fails here**, CI pipelines **WILL FAIL**
-> (especially `ci-stage` and `ci-prod`).
-
 ---
 
-## 🧹 Phase 1 – Clean Existing KIND Clusters
+## 📦 Clone the Repository
 
 ```bash
-kind get clusters
-```
-
-```bash
-for c in $(kind get clusters); do
-  kind delete cluster --name $c
-done
-```
-
-Verify:
-
-```bash
-kind get clusters
-```
-
-Expected output:
-
-```
-(no output)
-```
-
-Clean old contexts (only KIND ones):
-
-```bash
-kubectl config get-contexts
-kubectl config delete-context kind-kind
-kubectl config delete-context kind-test
+git clone <repository-url>
+cd framely
 ```
 
 ---
 
-## 🆕 Phase 2 – Create KIND Cluster (`framely-dev`)
+# 🚀 Phase 1 – Run Applications Using Docker Compose
 
-### 2.1 Create KIND Configuration
+This phase validates **application correctness only**, without Kubernetes or GitOps.
+
+### 📍 Docker Compose Location
+
+```
+apps/docker-compose.yml
+```
+
+---
+
+### ▶️ Start Services
+
+```bash
+cd apps
+docker compose up -d
+```
+
+This starts:
+
+* SQL Server database
+* Backend API
+* Frontend (Customer)
+* Frontend (Admin)
+
+---
+
+### 🌐 Access URLs
+
+| Component           | URL                                            |
+| ------------------- | ---------------------------------------------- |
+| Backend API         | [http://localhost:8081](http://localhost:8081) |
+| Frontend (Customer) | [http://localhost:3000](http://localhost:3000) |
+| Frontend (Admin)    | [http://localhost:3001](http://localhost:3001) |
+
+---
+
+### 🧪 Validation Checklist
+
+* Frontend applications load
+* Backend API responds
+* Database migrations complete successfully
+
+Stop services:
+
+```bash
+docker compose down
+```
+
+---
+
+# ☸️ Phase 2 – Create Local Kubernetes Cluster (KIND)
+
+This phase validates **Kubernetes + GitOps behavior**.
+
+---
+
+## 🆕 Create KIND Cluster
 
 ```bash
 mkdir -p ~/kind
@@ -191,38 +198,30 @@ nodes:
         hostPort: 80
       - containerPort: 443
         hostPort: 443
-
   - role: worker
   - role: worker
   - role: worker
 ```
 
-Create cluster:
+Create and verify:
 
 ```bash
 kind create cluster --config ~/kind/framely-dev.yaml
-```
-
-Verify:
-
-```bash
+kubectl config use-context kind-framely-dev
 kubectl get nodes
 kubectl cluster-info
-kubectl config use-context kind-framely-dev
 ```
 
 ---
 
-## 🌐 Phase 3 – Install Core Kubernetes Components
-
-### 3.1 Install NGINX Ingress Controller
+## 🌐 Install NGINX Ingress Controller
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 ```
 
 ```bash
-kubectl wait --namespace ingress-nginx \
+kubectl wait -n ingress-nginx \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
   --timeout=120s
@@ -230,17 +229,7 @@ kubectl wait --namespace ingress-nginx \
 
 ---
 
-### 3.2 Install ArgoCD
-
-```bash
-kubectl create namespace argocd
-kubectl apply -n argocd \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-```
-
----
-
-## 🔗 Jenkins (Local)
+# 🔁 Phase 3 – Jenkins (Local CI Validation)
 
 Jenkins runs **directly on the host**, not inside Kubernetes.
 
@@ -248,72 +237,171 @@ Jenkins runs **directly on the host**, not inside Kubernetes.
 http://localhost:8000
 ```
 
+### 🔴 Mandatory Step (Do NOT Skip)
+
+Before configuring Jenkins:
+
+> **You MUST read and understand:**
+> 📘 `jenkins/README.md`
+
+That document contains:
+
+* Required plugins
+* Jenkins job configuration
+* Repository URLs
+* Credentials & secrets
+* Pipeline behavior
+
+Without following that README, Jenkins **will not work correctly**.
+
 ### Jenkins Responsibilities (Local)
 
+* Build application images
 * Run unit & integration tests
-* Build Docker images
-* Scan images using Trivy (DevSecOps)
-* Push images to Docker Hub
+* Scan images using Trivy
+* Push images to registry
 * Update GitOps manifests using Kustomize
 
-> ❗ Jenkins **never deploys** to Kubernetes
-> ArgoCD is the **only deployment engine**
+> Jenkins **never deploys to Kubernetes**.
 
 ---
 
-## 🧠 Architecture Alignment (Local → AKS)
+# 🔄 Phase 4 – ArgoCD (Local GitOps Validation)
 
-| Component  | Local (KIND)  | Cloud (AKS)      |
-| ---------- | ------------- | ---------------- |
-| Kubernetes | KIND          | AKS              |
-| Ingress    | NGINX         | NGINX / AGIC     |
-| CI         | Local Jenkins | Azure VM Jenkins |
-| CD         | ArgoCD        | ArgoCD           |
-| GitOps     | Yes           | Yes              |
-| DevSecOps  | Trivy         | Trivy            |
+Install ArgoCD into the KIND cluster:
 
-👉 **Only infrastructure changes. CI/CD logic stays identical.**
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
 
----
+Port-forward UI access:
 
-## ✅ Current Local Validation Status
-
-* KIND cluster: ✅ Ready
-* Jenkins: ✅ Ready
-* ArgoCD: ✅ Ready
-* Docker builds: ✅ Stable
-* GitOps flow: ✅ Verified
-* Trivy scans: ✅ Integrated
-* CI pipelines:
-
-  * `ci-main`  → ✅ Green
-  * `ci-stage` → ✅ Green
-  * `ci-prod`  → ✅ Green (with security gates)
-* K8s manifets: ✅ Ready
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8081:443
+```
 
 ---
 
-## 🔥 Final & Non-Negotiable Rule
+### 🔴 Mandatory Rule (Very Important)
 
-> Any machine running Jenkins
-> (local VM today, Azure VM tomorrow)
-> **MUST have Docker, Dotnet, Node.js, npm, Kustomize, and Trivy installed globally**
->
-> Otherwise **CI / GitOps / DevSecOps pipelines WILL FAIL**.
+❌ **Do NOT apply application Kubernetes manifests directly**
+
+✅ **Only apply ArgoCD Project and Application manifests**
+
+Before proceeding:
+
+> **You MUST read:**
+> 📘 `argocd/README.md`
+
+That document explains:
+
+* ArgoCD Projects
+* ArgoCD Applications
+* Repository structure
+* Sync behavior
+
+Once ArgoCD Applications are applied, **ArgoCD will automatically sync and deploy workloads**.
+
+---
+
+# 📦 Phase 5 – GitOps Deployment via ArgoCD
+
+Apply only ArgoCD resources:
+
+```bash
+kubectl apply -f argocd/projects/
+kubectl apply -f argocd/applications/
+```
+
+> Application manifests under `kubernetes/`
+> are **managed exclusively by ArgoCD**.
 
 ---
 
-## 🏁 Final Statement
+## 📊 Optional – Local Monitoring
 
-This document is the **single source of truth** for:
+For local observability:
 
-* Local Kubernetes setup
-* Jenkins CI/CD execution
-* GitOps validation
-* DevSecOps enforcement
-* AKS migration readiness
+* Prometheus and Grafana can be installed using **Helm charts**
+* This setup is **optional** for local testing
 
-It mirrors **real-world production DevOps systems**, not demos.
+📘 Refer to:
+
+```
+monitoring/README.md
+```
 
 ---
+
+## 🚫 Modules to Ignore for Local Testing
+
+The following modules are **NOT required** for local execution:
+
+* `terraform/` → Infrastructure provisioning for Azure
+* `ansible/` → Jenkins VM configuration on Azure
+
+These are used **only when migrating to AKS**.
+
+---
+
+## 📚 Mandatory Documentation References
+
+Before running the full pipeline, **you must read**:
+
+| Area            | README                 |
+| --------------- | ---------------------- |
+| Applications    | `apps/README.md`       |
+| Jenkins         | `jenkins/README.md`    |
+| ArgoCD / GitOps | `argocd/README.md`     |
+| Kubernetes      | `kubernetes/README.md` |
+| Monitoring      | `monitoring/README.md` |
+
+This document **does not duplicate** those details by design.
+
+---
+
+## ⚠️ Important Migration Note
+
+This same source code repository is later **migrated to Azure AKS**.
+
+During migration:
+
+* Some local configurations may fail
+* Environment-specific fixes may be required
+* Infrastructure values will change
+
+However:
+
+* **Application source code remains largely unchanged**
+* CI/CD logic stays the same
+* GitOps principles remain identical
+
+For full context, **read all project documentation before modifying configurations**.
+
+---
+
+## 🧹 Cleanup
+
+```bash
+docker compose down
+kind delete cluster --name framely-dev
+```
+
+---
+
+## 🏁 Final Summary
+
+* Entire project can be tested on **one Linux machine**
+* No AKS or cloud resources required
+* Docker Compose validates application behavior
+* KIND + ArgoCD validate GitOps workflows
+* Jenkins validates CI pipelines
+* Terraform and Ansible are intentionally excluded
+
+This document enables **full local validation of the Framely Mega DevOps Project** before any cloud deployment.
+
+---
+
 

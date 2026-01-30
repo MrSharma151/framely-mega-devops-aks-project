@@ -1,39 +1,40 @@
 
 
----
+# 📘 ArgoCD GitOps Configuration
 
-# 📘 ArgoCD GitOps Setup – Framely Mega DevOps AKS Project
-
-**(FINAL – Single Source of Truth)**
+## Framely – Mega DevOps AKS Project
 
 ---
 
-## 🎯 Purpose of This Module
+## 🎯 Module Purpose
 
-This directory defines the **complete ArgoCD GitOps configuration** for the **Framely Mega DevOps AKS Project**.
+This directory contains the **complete ArgoCD GitOps configuration** for the Framely platform.
 
-It is responsible for:
+It defines:
 
-* Declaring **what should be deployed**
-* Defining **where it can be deployed**
-* Enforcing **GitOps, security, and governance rules**
-* Separating **deployment concerns from CI**
+* **What** workloads are deployed
+* **Where** workloads are allowed to deploy
+* **How** deployments are controlled and reconciled
+* **Which** Git repositories and Kubernetes resources are permitted
 
-> **Important Principle**
-> Jenkins builds & updates Git.
-> ArgoCD deploys what Git declares.
-> Kubernetes only runs what ArgoCD applies.
+This module establishes a **strict separation between CI and CD**.
+
+> Jenkins builds artifacts and updates Git.
+> ArgoCD deploys declared state from Git.
+> Kubernetes runs only what ArgoCD applies.
 
 ---
 
-## 🧠 GitOps Model Used
+## 🧠 GitOps Model
 
-This project follows **strict GitOps principles**:
+The project follows **strict GitOps principles**:
 
 * Git is the **single source of truth**
-* No `kubectl apply` from CI
-* No manual cluster changes
+* No direct `kubectl apply` from CI systems
+* No manual changes inside the cluster
 * ArgoCD continuously reconciles desired state
+
+All Kubernetes workloads are deployed **only through ArgoCD**.
 
 ---
 
@@ -41,7 +42,7 @@ This project follows **strict GitOps principles**:
 
 ```text
 argocd/
-├── README.md                 # This documentation
+├── README.md                 # Module documentation
 │
 ├── projects/
 │   └── framely-project.yaml  # ArgoCD Project (security boundary)
@@ -55,205 +56,199 @@ argocd/
 
 ---
 
-## 📦 ArgoCD Project – `framely-project.yaml`
+## 📦 ArgoCD Project
+
+### `framely-project.yaml`
 
 ### Purpose
 
-The ArgoCD Project defines a **security and governance boundary** for all Framely applications.
+The ArgoCD Project defines a **security and governance boundary** for all Framely deployments.
 
-It controls:
+It restricts:
 
-* Which Git repositories ArgoCD is allowed to read
-* Which Kubernetes namespaces applications can deploy to
-* Which cluster-scoped and namespace-scoped resources are allowed
+* Allowed Git repositories
+* Allowed Kubernetes namespaces
+* Allowed resource types (namespaced and cluster-scoped)
 
-### Why This Matters
+### Rationale
 
-* Prevents accidental deployments to wrong namespaces
-* Prevents usage of unauthorized Git repositories
-* Mirrors **real enterprise GitOps governance**
+* Prevents accidental deployment to unauthorized namespaces
+* Prevents usage of unapproved Git repositories
+* Enforces environment isolation
 
-> Think of ArgoCD Projects as **GitOps firewalls**.
+ArgoCD Projects function as **policy enforcement units** for GitOps.
 
 ---
 
 ## 🚀 ArgoCD Applications
 
-### 1️⃣ Stage Application – `framely-stage.yaml`
+### Stage Application
 
-**Environment:** Stage / Pre-Production
+`framely-stage.yaml`
 
-**Behavior:**
+**Environment:** Stage
 
-* Watches Git path: `kubernetes/stage`
-* Tracks branch: `stage`
-* Auto-sync: ✅ Enabled
-* Self-heal: ✅ Enabled
-* Prune: ✅ Enabled
+**Configuration:**
 
-**Why Auto-Sync?**
+* Git path: `kubernetes/stage`
+* Git branch: `stage`
+* Sync policy:
 
-Stage is used for:
+  * Auto-sync: Enabled
+  * Self-heal: Enabled
+  * Prune: Enabled
 
-* Fast feedback
-* Continuous Deployment
-* End-to-end validation
+### Behavior
 
-Any GitOps commit from Jenkins is **automatically deployed**.
+All Git changes merged into the `stage` branch are **automatically deployed**.
+
+This environment is used for:
+
+* Continuous deployment
+* Integration validation
+* End-to-end testing
 
 ---
 
-### 2️⃣ Production Application – `framely-prod.yaml`
+### Production Application
 
-**Environment:** Production (AKS)
+`framely-prod.yaml`
 
-**Behavior:**
+**Environment:** Production
 
-* Watches Git path: `kubernetes/prod`
-* Tracks branch: `prod`
-* Auto-sync: ❌ Disabled
-* Manual sync required
+**Configuration:**
 
-**Why Manual Sync?**
+* Git path: `kubernetes/prod`
+* Git branch: `prod`
+* Sync policy:
 
-Production requires:
+  * Auto-sync: Disabled
+  * Manual sync required
 
-* Explicit human approval
+### Behavior
+
+Deployments require **explicit manual synchronization**.
+
+This ensures:
+
 * Change control
-* Auditability
-
-This aligns with **enterprise Continuous Delivery**, not Continuous Deployment.
+* Human approval
+* Deployment auditability
 
 ---
 
-## 🔁 Interaction with Jenkins (CI/CD)
+## 🔁 CI/CD Responsibility Split
 
 | Responsibility            | Tool    |
 | ------------------------- | ------- |
-| Build & test applications | Jenkins |
+| Build and test            | Jenkins |
 | Security scanning (Trivy) | Jenkins |
-| Build & push images       | Jenkins |
-| Update image tags         | Jenkins |
-| Apply manifests           | ArgoCD  |
+| Image build and push      | Jenkins |
+| GitOps manifest updates   | Jenkins |
+| Kubernetes deployment     | ArgoCD  |
 
-> Jenkins **never touches Kubernetes directly**
-> ArgoCD **never builds images**
-
----
-
-## 🔐 Git Repository Access Strategy (IMPORTANT)
-
-### 🔹 Repository Type
-
-This is a **personal DevOps project**.
-The Git repository is **personal (not an org repo)** and may be **public or private**.
+Jenkins **never interacts with Kubernetes directly**.
+ArgoCD **never builds or modifies artifacts**.
 
 ---
 
-### 🔹 SSH-Based Git Access (Current Setup)
+## 🔐 Git Repository Access
 
-ArgoCD is configured to access Git using **SSH**:
+### Repository Context
+
+This project uses a **personal Git repository**.
+The repository may be public or private.
+
+---
+
+### SSH-Based Git Access (Default)
+
+ArgoCD is configured to access Git via **SSH**:
 
 ```yaml
 repoURL: git@github.com:MrSharma151/framely-aks-mega-devops.git
 ```
 
-#### Why SSH Was Chosen
+#### Requirements
 
-* Avoids GitHub API rate-limit issues
-* More stable for CI/CD & GitOps
-* Common in enterprise environments
+For SSH-based access:
 
-#### Mandatory Requirements for SSH Access
+1. A private SSH key must be available to ArgoCD
+2. The corresponding public key must be added to GitHub
+3. ArgoCD must be able to read the key at runtime
 
-If using SSH-based access:
-
-1. **Private SSH key must exist** on the machine where ArgoCD is running
-   (KIND node or AKS control plane node)
-2. **Public SSH key must be added** to the GitHub repository
-   (Deploy Key or personal SSH key)
-3. ArgoCD must be able to read the key
-
-If SSH is not configured correctly → **ArgoCD will NOT sync**
+If SSH authentication fails, **ArgoCD synchronization will fail**.
 
 ---
 
-### 🔹 HTTPS-Based Git Access (Alternative)
+### HTTPS-Based Git Access (Alternative)
 
-If you want to avoid SSH keys entirely:
-
-* You can switch `repoURL` to HTTPS
-* Fork this repository
-* Use public access or GitHub token authentication
-
-Example:
+HTTPS can be used instead of SSH:
 
 ```yaml
 repoURL: https://github.com/<your-username>/framely-aks-mega-devops.git
 ```
 
-✅ No SSH key required
-✅ Easier for beginners
-❌ May hit GitHub API limits in heavy usage
+Characteristics:
 
-Both approaches are **fully supported**.
+* No SSH key management
+* Easier initial setup
+* May require GitHub tokens for private repositories
 
----
-
-## ☁️ Local (KIND) → AKS Migration Safety
-
-| Aspect         | Local (KIND) | AKS  |
-| -------------- | ------------ | ---- |
-| ArgoCD YAML    | Same         | Same |
-| Project config | Same         | Same |
-| Applications   | Same         | Same |
-| GitOps flow    | Same         | Same |
-
-👉 **Only the Kubernetes cluster changes**
-No ArgoCD refactor required.
+Both access methods are supported.
 
 ---
 
-## 🔐 Security & DevSecOps Alignment
+## ☁️ Local (KIND) and AKS Compatibility
+
+| Aspect           | KIND | AKS  |
+| ---------------- | ---- | ---- |
+| ArgoCD Project   | Same | Same |
+| Applications     | Same | Same |
+| GitOps flow      | Same | Same |
+| YAML definitions | Same | Same |
+
+Only the Kubernetes cluster changes.
+No ArgoCD configuration changes are required during migration.
+
+---
+
+## 🔐 Security and Governance Alignment
 
 * CI enforces:
 
-  * Tests
-  * Dependency scanning
-  * Trivy image vulnerability scanning
+  * Automated tests
+  * Dependency checks
+  * Container image vulnerability scanning
 * GitOps ensures:
 
   * Only reviewed Git state is deployed
 * Production adds:
 
-  * Manual approval
-  * Manual ArgoCD sync
+  * Manual deployment control
+  * Explicit synchronization
 
-This provides **defense in depth**.
-
----
-
-## ✅ Module Status
-
-* ArgoCD Project: ✅ Locked
-* Stage Application: ✅ Locked
-* Prod Application: ✅ Locked
-* GitOps flow: ✅ Verified
-* AKS readiness: ✅ Complete
+This provides layered control across the delivery lifecycle.
 
 ---
 
-## 🏁 Final Statement
+## 📌 Usage Rules (Non-Negotiable)
 
-This ArgoCD module is:
-
-* Production-grade
-* GitOps-pure
-* Security-aware
-* AKS-ready
-
-It reflects **how real DevOps teams deploy at scale**, not demo pipelines.
+* Do not apply application manifests manually
+* Do not modify cluster state outside Git
+* All deployments must flow through ArgoCD
+* All changes must originate from Git commits
 
 ---
 
+## 🏁 Final Notes
+
+* This module is **production-ready**
+* GitOps behavior is **fully deterministic**
+* Environment separation is **strictly enforced**
+* Compatible with both local and AKS clusters
+
+This directory defines the **authoritative deployment model** for the Framely platform.
+
+---
 
