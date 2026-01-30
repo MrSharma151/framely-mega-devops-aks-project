@@ -39,12 +39,17 @@ before attempting GitOps update.
         def gitopsPath = "kubernetes/${environment}"
 
         // --------------------------------------------------
-        // Kustomize image handling (CRITICAL)
-        // LEFT  = image name WITHOUT tag (must match Deployment.yaml)
-        // RIGHT = full image WITH tag
+        // Kustomize image handling (CRITICAL FIX)
+        //
+        // LEFT  = logical image name (MUST match deployment.yaml)
+        // RIGHT = full image with registry + tag
         // --------------------------------------------------
-        def imageWithTag = "${app.builtImage.name}:${app.builtImage.tag}"
-        def imageWithoutTag = app.builtImage.name.split(":")[0]
+
+        // Example:
+        // app.builtImage.name = acrframelystage.azurecr.io/framely-backend
+        // logicalImageName   = framely-backend
+        def logicalImageName = app.builtImage.name.tokenize('/').last()
+        def fullImageWithTag = "${app.builtImage.name}:${app.builtImage.tag}"
 
         // --------------------------------------------------
         // Ensure correct Git branch
@@ -57,16 +62,16 @@ before attempting GitOps update.
         """
 
         // --------------------------------------------------
-        // Update Kustomize image mapping (OVERWRITE, NOT APPEND)
+        // Update Kustomize image mapping (REPLACE, NOT APPEND)
         // --------------------------------------------------
         dir(gitopsPath) {
             sh """
                 echo "Updating image in kustomization.yaml"
-                echo "Kustomize Image Name : ${imageWithoutTag}"
-                echo "Docker Image         : ${imageWithTag}"
+                echo "Logical Image Name : ${logicalImageName}"
+                echo "Full Docker Image  : ${fullImageWithTag}"
 
                 kustomize edit set image \
-                  ${imageWithoutTag}=${imageWithTag}
+                  ${logicalImageName}=${fullImageWithTag}
             """
         }
 
