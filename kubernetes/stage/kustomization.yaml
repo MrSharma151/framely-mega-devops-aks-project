@@ -17,11 +17,11 @@ kind: Kustomization
 # Resources
 # ----------------------------------------------------------------------
 resources:
-  - namespace.yaml
-  - backend
-  - frontend-admin
-  - frontend-customer
-  - ingress.yaml
+- namespace.yaml
+- backend
+- frontend-admin
+- frontend-customer
+- ingress.yaml
 
 # ----------------------------------------------------------------------
 # Image overrides (Stage)
