@@ -36,7 +36,7 @@ images:
   newTag: 0.1.0-3f9896c
 - name: framely-frontend-admin
   newName: acrframelystage.azurecr.io/framely-frontend-admin
-  newTag: 0.1.0-a2d118d
+  newTag: 0.1.0-3f9896c
 - name: framely-frontend-customer
   newName: acrframelystage.azurecr.io/framely-frontend-customer
   newTag: 0.1.0-a2d118d
