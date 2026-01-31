@@ -43,4 +43,4 @@ images:
   newTag: 0.1.0-04fead0
 - name: framely-frontend-customer
   newName: acrframelystage.azurecr.io/framely-frontend-customer
-  newTag: 0.1.0-afd71a0
+  newTag: 0.1.0-04fead0
