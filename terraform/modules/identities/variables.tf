@@ -28,4 +28,5 @@ variable "aks_identity_object_id" {
 variable "jenkins_identity_principal_id" {
   description = "Principal ID of Jenkins VM System Assigned Managed Identity"
   type        = string
+  default = null
 }

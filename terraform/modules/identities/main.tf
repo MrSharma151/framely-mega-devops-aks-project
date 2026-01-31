@@ -54,6 +54,9 @@ resource "azurerm_role_assignment" "aks_keyvault_reader" {
 # using System Assigned Managed Identity (no secrets).
 resource "azurerm_role_assignment" "jenkins_acr_push" {
 
+  # Only create if Jenkins identity is provided
+  count = var.jenkins_identity_principal_id != null ? 1 : 0
+
   # Scope is the Azure Container Registry
   scope = var.acr_id
 

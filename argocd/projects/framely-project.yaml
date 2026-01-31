@@ -57,9 +57,9 @@ spec:
     - namespace: framely-stage
       server: https://kubernetes.default.svc
 
-    # Production environment
-    - namespace: framely-prod
-      server: https://kubernetes.default.svc
+    # # Production environment
+    # - namespace: framely-prod
+    #   server: https://kubernetes.default.svc
 
     # FUTURE (OPTIONAL – Multi-cluster AKS):
     # - namespace: framely-stage

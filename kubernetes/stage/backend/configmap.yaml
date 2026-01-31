@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: framely-stage
+  labels:
+    app: backend
+    environment: stage
+    project: framely
+data:
+  # ------------------------------------------------------------
+  # ASP.NET Core Runtime
+  # ------------------------------------------------------------
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8080"
+
+  # ------------------------------------------------------------
+  # JWT Configuration (NON-SECRET)
+  # ------------------------------------------------------------
+  JwtSettings__Issuer: "FramelyAPI"
+  JwtSettings__Audience: "FramelyUsers"
+  JwtSettings__ExpiresInMinutes: "60"
+
+  # ------------------------------------------------------------
+  # Swagger (Stage enabled)
+  # ------------------------------------------------------------
+  Swagger__Enabled: "true"
+
+  # ------------------------------------------------------------
+  # CORS Configuration (Stage - AKS subdomains)
+  # IMPORTANT: must match Ingress domains
+  # ------------------------------------------------------------
+  FrontendOrigins__0: "https://admin.<domain>"
+  FrontendOrigins__1: "https://app.<domain>"
+
+  # ------------------------------------------------------------
+  # Application Flags
+  # ------------------------------------------------------------
+  SeedAdmin: "true"
+
+  # ------------------------------------------------------------
+  # Azure Blob Storage (NON-SECRET)
+  # ------------------------------------------------------------
+  Storage__Container: "uploads"
+  Storage__Name: "<storage-account-name>"

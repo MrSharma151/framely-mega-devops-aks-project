@@ -22,90 +22,65 @@ spec:
       containers:
         - name: backend
           image: framely-backend:latest
-          # Image tag will be updated by Jenkins via Kustomize
+          # Image tag managed by Jenkins + Kustomize (root)
 
           ports:
             - containerPort: 8080
 
           # ------------------------------------------------------------
-          # SECURITY CONTEXT (AKS-safe, matches Dockerfile)
+          # SECURITY CONTEXT (AKS-safe)
           # ------------------------------------------------------------
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+          # NOTE:
+          # readOnlyRootFilesystem REMOVED
+          # ASP.NET Core may need /tmp access on AKS
 
           # ------------------------------------------------------------
-          # ASP.NET Core Runtime Configuration
+          # ENVIRONMENT VARIABLES
           # ------------------------------------------------------------
+          # Non-secret config from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: backend-config
+
+          # Secret values from Azure Key Vault (via CSI mounted files)
           env:
-            - name: ASPNETCORE_ENVIRONMENT
-              value: "Production"
-
-            - name: ASPNETCORE_URLS
-              value: "http://+:8080"
-
-            # ------------------------------------------------------------
-            # Database Connection (Azure SQL via Secret)
-            # ------------------------------------------------------------
             - name: ConnectionStrings__DefaultConnection
               valueFrom:
-                secretKeyRef:
-                  name: backend-db-secret
-                  key: connection-string
+                configMapKeyRef:
+                  name: backend-secrets
+                  key: ConnectionStrings__DefaultConnection
 
-            # ------------------------------------------------------------
-            # JWT Configuration
-            # NOTE: Secret MUST move to Kubernetes Secret (next step)
-            # ------------------------------------------------------------
             - name: JwtSettings__Secret
               valueFrom:
-                secretKeyRef:
-                  name: backend-jwt-secret
-                  key: jwt-secret
+                configMapKeyRef:
+                  name: backend-secrets
+                  key: JwtSettings__Secret
 
-            - name: JwtSettings__Issuer
-              value: "FramelyAPI"
-
-            - name: JwtSettings__Audience
-              value: "FramelyUsers"
-
-            # ------------------------------------------------------------
-            # CORS Configuration (Stage)
-            # NOTE: Replace localhost with stage ingress domain later
-            # ------------------------------------------------------------
-            - name: FrontendOrigins__0
-              value: "http://localhost:3000"
-
-            - name: FrontendOrigins__1
-              value: "http://localhost:3001"
-
-            # ------------------------------------------------------------
-            # Azure Blob Storage (Secrets handled later)
-            # ------------------------------------------------------------
             - name: Storage__ConnectionString
               valueFrom:
-                secretKeyRef:
-                  name: backend-storage-secret
-                  key: connection-string
-
-            - name: Storage__Container
-              value: "uploads"
-
-            - name: Storage__Name
-              valueFrom:
-                secretKeyRef:
-                  name: backend-storage-secret
-                  key: account-name
+                configMapKeyRef:
+                  name: backend-secrets
+                  key: Storage__ConnectionString
 
             - name: Storage__Key
               valueFrom:
-                secretKeyRef:
-                  name: backend-storage-secret
-                  key: account-key
+                configMapKeyRef:
+                  name: backend-secrets
+                  key: Storage__Key
+
+          # ------------------------------------------------------------
+          # MOUNT AZURE KEY VAULT SECRETS (CSI)
+          # ------------------------------------------------------------
+          volumeMounts:
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
 
           # ------------------------------------------------------------
           # PROBES (AKS-friendly for ASP.NET Core)
@@ -132,7 +107,7 @@ spec:
             periodSeconds: 30
 
           # ------------------------------------------------------------
-          # RESOURCE MANAGEMENT (AKS realistic defaults)
+          # RESOURCE MANAGEMENT
           # ------------------------------------------------------------
           resources:
             requests:
@@ -141,3 +116,14 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+
+      # ------------------------------------------------------------
+      # VOLUMES (Azure Key Vault CSI)
+      # ------------------------------------------------------------
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: backend-secrets
