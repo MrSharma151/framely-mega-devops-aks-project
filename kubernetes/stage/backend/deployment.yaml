@@ -28,14 +28,13 @@ spec:
           # SECURITY CONTEXT (AKS-safe)
           # ------------------------------------------------------------
           securityContext:
-            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
           # NOTE:
+          # runAsNonRoot REMOVED (image uses non-numeric USER)
           # readOnlyRootFilesystem intentionally NOT enabled
-          # ASP.NET Core needs /tmp access on AKS
 
           # ------------------------------------------------------------
           # ENVIRONMENT VARIABLES
@@ -48,8 +47,6 @@ spec:
           # ------------------------------------------------------------
           # AZURE KEY VAULT SECRETS (CSI FILE MOUNT)
           # ------------------------------------------------------------
-          # Secrets are read from files:
-          # /mnt/secrets/<secret-name>
           volumeMounts:
             - name: secrets-store
               mountPath: /mnt/secrets
@@ -96,7 +93,7 @@ spec:
       volumes:
         - name: secrets-store
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: secrets-store.csi.x-k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: backend-secrets
