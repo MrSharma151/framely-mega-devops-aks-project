@@ -23,11 +23,6 @@ builder.Configuration.AddKeyPerFile("/mnt/secrets", optional: true);
 builder.Services.AddControllers();
 
 // Step 2: Add Swagger with JWT and file upload support
-
-// AKS health endpoint (readiness / liveness)
-app.MapHealthChecks("/health");
-
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -160,9 +155,6 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// AKS health endpoint (readiness / liveness)
-app.MapHealthChecks("/health");
 
 
 // This is the entry point for the Framely API application.
