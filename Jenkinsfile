@@ -28,7 +28,7 @@ pipeline {
         PIPELINES_DIR = "jenkins/pipelines"
         CONFIG_DIR    = "jenkins/config"
 
-        // 🔥 CRITICAL FLAG TO STOP GITOPS LOOPS
+        // CRITICAL FLAG TO STOP GITOPS LOOPS
         SKIP_CI = "false"
     }
 
