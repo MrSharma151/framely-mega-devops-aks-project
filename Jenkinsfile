@@ -8,10 +8,8 @@
  - Routes execution based on branch
  - Enforces GitOps safety and CI discipline
 
- NOTE:
- - Jenkins NEVER deploys to Kubernetes
- - Jenkins NEVER modifies manifests directly
- - Jenkins ONLY builds artifacts and updates GitOps state
+ KEY GUARANTEE:
+ - GitOps commits containing [skip ci] will NEVER re-trigger pipelines
 ========================================================================
 */
 
@@ -19,24 +17,22 @@ pipeline {
     agent any
 
     options {
-        // Prevent parallel executions for the same branch
         disableConcurrentBuilds()
-
-        // Add timestamps to logs (production-grade debugging)
         timestamps()
-
-        // Enable ANSI colors for better log readability
         ansiColor('xterm')
     }
 
     environment {
-        PROJECT_NAME = "framely"
+        PROJECT_NAME = "Framely – Mega DevOps AKS Project"
 
-        // Centralized Jenkins pipeline directory
         PIPELINES_DIR = "jenkins/pipelines"
+        CONFIG_DIR    = "jenkins/config"
 
-        // Centralized config directory
-        CONFIG_DIR = "jenkins/config"
+        // CRITICAL FLAG TO STOP GITOPS LOOPS
+        SKIP_CI = "false"
+
+        // Email recipients (can be expanded later)
+        NOTIFY_EMAIL = "yourgmail@gmail.com"
     }
 
     stages {
@@ -44,9 +40,6 @@ pipeline {
         /*
         ================================================================
         Checkout Source Code
-        ------------------------------------------------
-        - Ensures repository is available for all stages
-        - Required before reading commit messages or configs
         ================================================================
         */
         stage('Checkout Source Code') {
@@ -57,11 +50,7 @@ pipeline {
 
         /*
         ================================================================
-        CI Guard Stage (🔥 CRITICAL)
-        ------------------------------------------------
-        Purpose:
-        - Prevent infinite CI loops caused by GitOps commits
-        - Skip pipeline execution when commit contains [skip ci]
+        CI Guard (🔥 LOOP BREAKER)
         ================================================================
         */
         stage('CI Guard') {
@@ -76,9 +65,8 @@ pipeline {
                     echo commitMessage
 
                     if (commitMessage.contains('[skip ci]')) {
-                        echo "🛑 [skip ci] detected. Skipping pipeline execution."
-                        currentBuild.result = 'SUCCESS'
-                        return
+                        echo "🛑 [skip ci] detected. Marking build to be skipped."
+                        env.SKIP_CI = "true"
                     }
                 }
             }
@@ -87,14 +75,12 @@ pipeline {
         /*
         ================================================================
         Branch Validation
-        ------------------------------------------------
-        Enforces strict branch strategy:
-        - main  → CI validation only
-        - stage → CI + auto GitOps
-        - prod  → CI + manual promotion
         ================================================================
         */
         stage('Branch Validation') {
+            when {
+                expression { env.SKIP_CI != "true" }
+            }
             steps {
                 script {
                     echo "Running pipeline for branch: ${env.BRANCH_NAME}"
@@ -103,14 +89,13 @@ pipeline {
 
                     if (!allowedBranches.contains(env.BRANCH_NAME)) {
                         error("""
-                            ❌ Invalid branch '${env.BRANCH_NAME}'
+❌ Invalid branch '${env.BRANCH_NAME}'
 
-                                Allowed branches:
-                                - main   → CI validation only
-                                - stage  → CI + auto GitOps update
-                                - prod   → CI + manual promotion
-                            Please switch to a valid branch.
-                        """.stripIndent())
+Allowed branches:
+- main   → CI validation only
+- stage  → CI + auto GitOps update
+- prod   → CI + manual promotion
+""")
                     }
                 }
             }
@@ -118,13 +103,13 @@ pipeline {
 
         /*
         ================================================================
-        Load Pipeline Configuration
-        ------------------------------------------------
-        - Loads application, image, and registry mappings
-        - Keeps Jenkins logic fully config-driven
+        Load Configuration
         ================================================================
         */
         stage('Load Configuration') {
+            when {
+                expression { env.SKIP_CI != "true" }
+            }
             steps {
                 script {
                     echo "Loading Jenkins pipeline configuration files"
@@ -145,11 +130,12 @@ pipeline {
         /*
         ================================================================
         Pipeline Routing
-        ------------------------------------------------
-        Routes execution to branch-specific pipeline logic
         ================================================================
         */
         stage('Pipeline Routing') {
+            when {
+                expression { env.SKIP_CI != "true" }
+            }
             steps {
                 script {
 
@@ -179,17 +165,63 @@ pipeline {
         }
     }
 
+    /*
+    ================================================================
+    EMAIL NOTIFICATIONS (Email Extension Plugin)
+    ================================================================
+    */
     post {
+
         success {
-            echo "✅ Pipeline completed successfully for branch: ${env.BRANCH_NAME}"
+            emailext(
+                to: "${env.NOTIFY_EMAIL}",
+                subject: "✅ SUCCESS | ${env.PROJECT_NAME} | ${env.BRANCH_NAME} | Build #${env.BUILD_NUMBER}",
+                body: """
+                <h2 style="color:green;">Build Successful ✅</h2>
+                <p><b>Project:</b> ${env.PROJECT_NAME}</p>
+                <p><b>Branch:</b> ${env.BRANCH_NAME}</p>
+                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Status:</b> SUCCESS</p>
+                <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                <hr/>
+                <p>This is an automated notification from Jenkins.</p>
+                """
+            )
         }
 
         failure {
-            echo "❌ Pipeline failed for branch: ${env.BRANCH_NAME}"
+            emailext(
+                to: "${env.NOTIFY_EMAIL}",
+                subject: "❌ FAILURE | ${env.PROJECT_NAME} | ${env.BRANCH_NAME} | Build #${env.BUILD_NUMBER}",
+                body: """
+                <h2 style="color:red;">Build Failed ❌</h2>
+                <p><b>Project:</b> ${env.PROJECT_NAME}</p>
+                <p><b>Branch:</b> ${env.BRANCH_NAME}</p>
+                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Status:</b> FAILURE</p>
+                <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                <hr/>
+                <p>Please review the Jenkins logs to identify the root cause.</p>
+                """
+            )
+        }
+
+        unstable {
+            emailext(
+                to: "${env.NOTIFY_EMAIL}",
+                subject: "⚠️ UNSTABLE | ${env.PROJECT_NAME} | ${env.BRANCH_NAME} | Build #${env.BUILD_NUMBER}",
+                body: """
+                <h2 style="color:orange;">Build Unstable ⚠️</h2>
+                <p><b>Project:</b> ${env.PROJECT_NAME}</p>
+                <p><b>Branch:</b> ${env.BRANCH_NAME}</p>
+                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Status:</b> UNSTABLE</p>
+                <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                """
+            )
         }
 
         always {
-            // Ensure clean workspace for next build
             cleanWs()
         }
     }
