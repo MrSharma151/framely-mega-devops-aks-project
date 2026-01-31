@@ -32,7 +32,7 @@ pipeline {
         SKIP_CI = "false"
 
         // Email recipients (can be expanded later)
-        NOTIFY_EMAIL = "yourgmail@gmail.com"
+        NOTIFY_EMAIL = "rhs.roneto151@gmail.com"
     }
 
     stages {
