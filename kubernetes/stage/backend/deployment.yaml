@@ -31,16 +31,16 @@ spec:
                 - ALL
 
           # ------------------------------------------------------------
-          # ENVIRONMENT VARIABLES
+          # ENVIRONMENT VARIABLES (🔥 THIS IS THE FIX)
           # ------------------------------------------------------------
           envFrom:
             - configMapRef:
                 name: backend-config
-          #   - secretRef:
-          #       name: backend-secrets
+            - secretRef:                # ✅ REQUIRED
+                name: backend-secrets   # ✅ REQUIRED
 
           # ------------------------------------------------------------
-          # KEY VAULT CSI (for audit / debug only)
+          # KEY VAULT CSI (debug / audit only)
           # ------------------------------------------------------------
           volumeMounts:
             - name: secrets-store
