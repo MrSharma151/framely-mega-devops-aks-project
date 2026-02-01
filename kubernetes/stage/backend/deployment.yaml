@@ -10,129 +10,45 @@ spec:
   selector:
     matchLabels:
       app: backend
-
   template:
     metadata:
       labels:
         app: backend
     spec:
-      # ------------------------------------------------------------
-      # BACKEND CONTAINER
-      # ------------------------------------------------------------
       containers:
         - name: backend
           image: framely-backend:latest
-          # Image tag will be updated by Jenkins via Kustomize
-
           ports:
             - containerPort: 8080
 
           # ------------------------------------------------------------
-          # SECURITY CONTEXT (AKS-safe, matches Dockerfile)
+          # SECURITY CONTEXT (AKS-safe)
           # ------------------------------------------------------------
           securityContext:
-            runAsNonRoot: true
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
 
           # ------------------------------------------------------------
-          # ASP.NET Core Runtime Configuration
+          # ENVIRONMENT VARIABLES (🔥 THIS IS THE FIX)
           # ------------------------------------------------------------
-          env:
-            - name: ASPNETCORE_ENVIRONMENT
-              value: "Production"
-
-            - name: ASPNETCORE_URLS
-              value: "http://+:8080"
-
-            # ------------------------------------------------------------
-            # Database Connection (Azure SQL via Secret)
-            # ------------------------------------------------------------
-            - name: ConnectionStrings__DefaultConnection
-              valueFrom:
-                secretKeyRef:
-                  name: backend-db-secret
-                  key: connection-string
-
-            # ------------------------------------------------------------
-            # JWT Configuration
-            # NOTE: Secret MUST move to Kubernetes Secret (next step)
-            # ------------------------------------------------------------
-            - name: JwtSettings__Secret
-              valueFrom:
-                secretKeyRef:
-                  name: backend-jwt-secret
-                  key: jwt-secret
-
-            - name: JwtSettings__Issuer
-              value: "FramelyAPI"
-
-            - name: JwtSettings__Audience
-              value: "FramelyUsers"
-
-            # ------------------------------------------------------------
-            # CORS Configuration (Stage)
-            # NOTE: Replace localhost with stage ingress domain later
-            # ------------------------------------------------------------
-            - name: FrontendOrigins__0
-              value: "http://localhost:3000"
-
-            - name: FrontendOrigins__1
-              value: "http://localhost:3001"
-
-            # ------------------------------------------------------------
-            # Azure Blob Storage (Secrets handled later)
-            # ------------------------------------------------------------
-            - name: Storage__ConnectionString
-              valueFrom:
-                secretKeyRef:
-                  name: backend-storage-secret
-                  key: connection-string
-
-            - name: Storage__Container
-              value: "uploads"
-
-            - name: Storage__Name
-              valueFrom:
-                secretKeyRef:
-                  name: backend-storage-secret
-                  key: account-name
-
-            - name: Storage__Key
-              valueFrom:
-                secretKeyRef:
-                  name: backend-storage-secret
-                  key: account-key
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:                # ✅ REQUIRED
+                name: backend-secrets   # ✅ REQUIRED
 
           # ------------------------------------------------------------
-          # PROBES (AKS-friendly for ASP.NET Core)
+          # KEY VAULT CSI (debug / audit only)
           # ------------------------------------------------------------
-          startupProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            failureThreshold: 30
-            periodSeconds: 10
-
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
-
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 30
+          volumeMounts:
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
 
           # ------------------------------------------------------------
-          # RESOURCE MANAGEMENT (AKS realistic defaults)
+          # RESOURCES
           # ------------------------------------------------------------
           resources:
             requests:
@@ -141,3 +57,11 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: backend-secrets

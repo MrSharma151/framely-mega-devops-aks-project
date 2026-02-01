@@ -10,7 +10,6 @@ spec:
   selector:
     matchLabels:
       app: frontend-customer
-
   template:
     metadata:
       labels:
@@ -19,53 +18,19 @@ spec:
       containers:
         - name: frontend-customer
           image: framely-frontend-customer:latest
-          # Image tag is managed via Kustomize (GitOps / Jenkins)
+          # Image tag managed via Kustomize (GitOps)
 
           ports:
             - containerPort: 3000
 
-          # ------------------------------------------------------------
-          # SECURITY CONTEXT (stateless frontend, strict by default)
-          # ------------------------------------------------------------
           securityContext:
             runAsNonRoot: true
+            runAsUser: 1001
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
 
-          # ------------------------------------------------------------
-          # Frontend Configuration
-          # IMPORTANT:
-          # NEXT_PUBLIC_* variables are BUILD-TIME only.
-          # Real values are injected during CI image build.
-          # This entry exists for documentation clarity only.
-          # ------------------------------------------------------------
-          env:
-            - name: NEXT_PUBLIC_API_BASE_URL
-              value: "http://placeholder-not-used-at-runtime"
-
-          # ------------------------------------------------------------
-          # Probes (safe defaults for Next.js standalone)
-          # ------------------------------------------------------------
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-
-          # ------------------------------------------------------------
-          # Resource Management (frontend is lightweight)
-          # ------------------------------------------------------------
           resources:
             requests:
               cpu: "50m"

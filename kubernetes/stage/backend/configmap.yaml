@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: framely-stage
+  labels:
+    app: backend
+    environment: stage
+    project: framely
+data:
+  # ------------------------------------------------------------
+  # ASP.NET Core Runtime
+  # ------------------------------------------------------------
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8080"
+
+  # ------------------------------------------------------------
+  # JWT Configuration (NON-SECRET)
+  # ------------------------------------------------------------
+  JwtSettings__Issuer: "FramelyAPI"
+  JwtSettings__Audience: "FramelyUsers"
+  JwtSettings__ExpiresInMinutes: "60"
+
+  # ------------------------------------------------------------
+  # Swagger (Stage enabled)
+  # ------------------------------------------------------------
+  Swagger__Enabled: "true"
+
+  # ------------------------------------------------------------
+  # CORS Configuration (Stage - AKS Ingress domains)
+  # ------------------------------------------------------------
+  FrontendOrigins__0: "http://framely-admin-sg.rohitsharma.org"
+  FrontendOrigins__1: "http://framely-sg.rohitsharma.org"
+
+  # ------------------------------------------------------------
+  # Application Flags
+  # ------------------------------------------------------------
+  SeedAdmin: "true"
+

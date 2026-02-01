@@ -76,6 +76,13 @@ resource "azurerm_kubernetes_cluster" "this" {
 
     # Network policy can be extended later if required
     network_policy = "azure"
+
+    # Outbound type for AKS cluster
+    outbound_type = "loadBalancer"
+
+    # Kubernetes service CIDR and DNS IP
+    service_cidr = "10.1.0.0/16"
+    dns_service_ip = "10.1.0.10"
   }
 
 
@@ -116,9 +123,12 @@ resource "azurerm_kubernetes_cluster_node_pool" "user" {
   # VM size for application workloads
   vm_size = var.user_node_vm_size
 
-  # Minimum and maximum number of nodes (enables autoscaling)
-  min_count = var.user_node_min_count
-  max_count = var.user_node_max_count
+  # Correct attribute name
+  auto_scaling_enabled = var.user_node_enable_auto_scaling
+
+  # Terraform-safe conditional logic
+  min_count = var.user_node_enable_auto_scaling ? var.user_node_min_count : null
+  max_count = var.user_node_enable_auto_scaling ? var.user_node_max_count : null
 
   # Subnet for user node pool
   vnet_subnet_id = var.aks_subnet_id

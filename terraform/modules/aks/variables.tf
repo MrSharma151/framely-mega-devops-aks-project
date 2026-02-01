@@ -66,3 +66,9 @@ variable "tags" {
   description = "Tags to apply to AKS resources"
   type        = map(string)
 }
+
+# Enable autoscaling for user node pool
+variable "user_node_enable_auto_scaling" {
+  description = "Enable autoscaling for user node pool"
+  type        = bool
+}

@@ -16,6 +16,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Reads secrets from /mnt/secrets/<key> and injects into IConfiguration
+builder.Configuration.AddKeyPerFile("/mnt/secrets", optional: true);
+
 // Step 1: Add Controllers
 builder.Services.AddControllers();
 
@@ -57,6 +60,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
 
 // Step 3: Register DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -117,20 +121,40 @@ var frontendOrigins = builder.Configuration
     .GetSection("FrontendOrigins")
     .Get<string[]>();
 
+// 🔍 DEBUG: Print resolved CORS origins at startup
+Console.WriteLine("========== CORS Allowed Origins ==========");
+if (frontendOrigins != null && frontendOrigins.Length > 0)
+{
+    foreach (var origin in frontendOrigins)
+        Console.WriteLine($" - {origin}");
+}
+else
+{
+    Console.WriteLine(" - Using fallback origins");
+}
+Console.WriteLine("==========================================");
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins(frontendOrigins ?? new[]
-            {
-                "http://localhost:3000",
-                "http://localhost:3001"
-            })
+            .WithOrigins(
+                frontendOrigins ??
+                new[]
+                {
+                    "http://framely-admin-sg.rohitsharma.org",
+                    "http://framely-sg.rohitsharma.org",
+                    "http://localhost:3000",
+                    "http://localhost:3001"
+                }
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
+
+
 
 var app = builder.Build();
 
@@ -144,6 +168,18 @@ if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
     });
 }
 
+
+// OPTIONS HANDLER (added)
+// app.Use(async (context, next) =>
+// {
+//     if (context.Request.Method == HttpMethods.Options)
+//     {
+//         context.Response.StatusCode = StatusCodes.Status200OK;
+//         return;
+//     }
+//     await next();
+// });
+
 // Step 10: Middleware pipeline
 // app.UseHttpsRedirection();
 app.UseRouting();
@@ -151,6 +187,7 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
 
 // This is the entry point for the Framely API application.
 app.MapGet("/", async context =>

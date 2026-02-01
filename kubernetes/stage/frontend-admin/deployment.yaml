@@ -10,7 +10,6 @@ spec:
   selector:
     matchLabels:
       app: frontend-admin
-
   template:
     metadata:
       labels:
@@ -19,53 +18,19 @@ spec:
       containers:
         - name: frontend-admin
           image: framely-frontend-admin:latest
-          # Image tag is updated via Kustomize (GitOps / Jenkins)
+          # Image tag replaced by Kustomize (GitOps)
 
           ports:
             - containerPort: 3000
 
-          # ------------------------------------------------------------
-          # SECURITY CONTEXT (frontend = easiest win)
-          # ------------------------------------------------------------
           securityContext:
             runAsNonRoot: true
+            runAsUser: 1001
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
 
-          # ------------------------------------------------------------
-          # Frontend Configuration
-          # IMPORTANT:
-          # NEXT_PUBLIC_* vars are BUILD-TIME.
-          # This value exists ONLY for documentation parity.
-          # Real value is injected during image build in CI.
-          # ------------------------------------------------------------
-          env:
-            - name: NEXT_PUBLIC_API_BASE_URL
-              value: "http://placeholder-not-used-at-runtime"
-
-          # ------------------------------------------------------------
-          # Probes (safe default for Next.js standalone)
-          # ------------------------------------------------------------
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-
-          # ------------------------------------------------------------
-          # Resource Management (Frontend = lightweight)
-          # ------------------------------------------------------------
           resources:
             requests:
               cpu: "50m"

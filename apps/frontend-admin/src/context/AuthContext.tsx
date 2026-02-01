@@ -6,11 +6,11 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import Cookies from "js-cookie";
 import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
-// Defines the full authentication response from the backend
+// ================= TYPES =================
+
 interface AuthResponseDto {
   userId: string;
   fullName: string;
@@ -21,7 +21,6 @@ interface AuthResponseDto {
   refreshToken: string | null;
 }
 
-// Defines the minimal user model used on the frontend
 interface User {
   userId: string;
   fullName: string;
@@ -31,7 +30,6 @@ interface User {
   refreshToken: string | null;
 }
 
-// Defines the shape of the authentication context
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -47,6 +45,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// ================= PROVIDER =================
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -56,12 +56,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Restores authentication state from cookies on initial load
+  // 🔥 Restore auth state from localStorage (NOT cookies)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const savedToken = Cookies.get("token");
-    const savedUser = Cookies.get("user");
+    const savedToken = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
 
     if (savedToken && savedUser) {
       try {
@@ -71,33 +71,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setToken(savedToken);
           setUser(parsedUser);
         } else {
-          Cookies.remove("token");
-          Cookies.remove("user");
-          setToken(null);
-          setUser(null);
-
-          if (pathname !== "/auth/login") {
-            toast.error("Only Admin users can login.");
-            router.push("/auth/login");
-          }
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/auth/login");
         }
       } catch (err) {
-        console.error("Failed to parse user:", err);
-        Cookies.remove("token");
-        Cookies.remove("user");
+        console.error("Failed to restore auth:", err);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
 
     setHydrated(true);
   }, [pathname, router]);
 
-  // Handles login and persists credentials in cookies
+  // ================= LOGIN =================
+
   const login = (authData: AuthResponseDto) => {
     if (authData.role !== "ADMIN") {
-      if (!error) {
-        setError("Only Admin users are allowed to login.");
-        toast.error("Only Admin users are allowed to login.");
-      }
+      setError("Only Admin users are allowed.");
+      toast.error("Only Admin users are allowed.");
       return;
     }
 
@@ -107,29 +100,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(userData);
     setError(null);
 
-    Cookies.set("token", token, {
-      expires: 7,
-      secure: true,
-      sameSite: "Strict",
-    });
-
-    Cookies.set("user", JSON.stringify(userData), {
-      expires: 7,
-      secure: true,
-      sameSite: "Strict",
-    });
+    // 🔥 Persist in localStorage
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
 
     toast.success("Logged in successfully.");
     router.push("/");
   };
 
-  // Clears authentication state and cookies
+  // ================= LOGOUT =================
+
   const logout = () => {
     setToken(null);
     setUser(null);
     setError(null);
-    Cookies.remove("token");
-    Cookies.remove("user");
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
     toast.success("Logged out.");
     router.push("/auth/login");
   };
