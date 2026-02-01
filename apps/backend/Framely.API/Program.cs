@@ -121,37 +121,42 @@ var frontendOrigins = builder.Configuration
     .GetSection("FrontendOrigins")
     .Get<string[]>();
 
+// 🔍 DEBUG: Print resolved CORS origins at startup
+Console.WriteLine("========== CORS Allowed Origins ==========");
+if (frontendOrigins != null && frontendOrigins.Length > 0)
+{
+    foreach (var origin in frontendOrigins)
+        Console.WriteLine($" - {origin}");
+}
+else
+{
+    Console.WriteLine(" - Using fallback origins");
+}
+Console.WriteLine("==========================================");
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins(frontendOrigins ?? new[]
-            {
-                "http://localhost:3000",
-                "http://localhost:3001"
-            })
+            .WithOrigins(
+                frontendOrigins ??
+                new[]
+                {
+                    "http://framely-admin-sg.rohitsharma.org",
+                    "http://framely-sg.rohitsharma.org",
+                    "http://localhost:3000",
+                    "http://localhost:3001"
+                }
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
+
+
 var app = builder.Build();
-
-// ------------------------------------------------------------
-//  GLOBAL OPTIONS HANDLER (CORS PREFLIGHT FIX)
-// ------------------------------------------------------------
-app.Use(async (context, next) =>
-{
-    if (context.Request.Method == HttpMethods.Options)
-    {
-        context.Response.StatusCode = StatusCodes.Status200OK;
-        return;
-    }
-
-    await next();
-});
-
 
 // Step 9: Enable Swagger UI in Dev or Staging
 if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
@@ -165,15 +170,15 @@ if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
 
 
 // OPTIONS HANDLER (added)
-app.Use(async (context, next) =>
-{
-    if (context.Request.Method == HttpMethods.Options)
-    {
-        context.Response.StatusCode = StatusCodes.Status200OK;
-        return;
-    }
-    await next();
-});
+// app.Use(async (context, next) =>
+// {
+//     if (context.Request.Method == HttpMethods.Options)
+//     {
+//         context.Response.StatusCode = StatusCodes.Status200OK;
+//         return;
+//     }
+//     await next();
+// });
 
 // Step 10: Middleware pipeline
 // app.UseHttpsRedirection();
