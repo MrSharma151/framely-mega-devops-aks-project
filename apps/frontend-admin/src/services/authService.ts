@@ -1,5 +1,4 @@
 import apiClient from "./apiClient";
-import Cookies from "js-cookie";
 
 // Defines the payload structure for login credentials
 export interface LoginPayload {
@@ -20,18 +19,24 @@ export interface AuthResponse {
 
 /**
  * Sends a login request to the API and returns the authentication response.
+ * Also persists auth state in localStorage (STAGE SAFE).
  */
 export const loginUser = async (data: LoginPayload): Promise<AuthResponse> => {
   const response = await apiClient.post<AuthResponse>("/Auth/login", data);
+
+  // 🔐 Persist auth state
+  localStorage.setItem("token", response.data.token);
+  localStorage.setItem("user", JSON.stringify(response.data));
+
   return response.data;
 };
 
 /**
- * Clears authentication cookies and redirects the user to the login page.
+ * Clears authentication state and redirects to login page.
  */
 export const logoutUser = () => {
-  Cookies.remove("token");
-  Cookies.remove("user");
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 
   setTimeout(() => {
     window.location.href = "/auth/login";
