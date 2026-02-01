@@ -138,6 +138,21 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// ------------------------------------------------------------
+//  GLOBAL OPTIONS HANDLER (CORS PREFLIGHT FIX)
+// ------------------------------------------------------------
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == HttpMethods.Options)
+    {
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        return;
+    }
+
+    await next();
+});
+
+
 // Step 9: Enable Swagger UI in Dev or Staging
 if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
@@ -147,6 +162,18 @@ if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Framely API v1");
     });
 }
+
+
+// OPTIONS HANDLER (added)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == HttpMethods.Options)
+    {
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        return;
+    }
+    await next();
+});
 
 // Step 10: Middleware pipeline
 // app.UseHttpsRedirection();
