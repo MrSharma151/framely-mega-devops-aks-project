@@ -1,25 +1,12 @@
-// test/auth/AuthContext.test.tsx
-
 import React from "react";
 import { render, screen, act } from "@testing-library/react";
 import { AuthProvider, AuthContext } from "@/context/AuthContext";
-import Cookies from "js-cookie";
-
-/**
- * Mock js-cookie to avoid real browser cookies
- */
-jest.mock("js-cookie", () => ({
-  get: jest.fn(),
-  set: jest.fn(),
-  remove: jest.fn(),
-}));
 
 /**
  * Test component to consume AuthContext
  */
 const TestConsumer = () => {
   const auth = React.useContext(AuthContext);
-
   if (!auth) return null;
 
   return (
@@ -27,6 +14,7 @@ const TestConsumer = () => {
       <span data-testid="hydrated">
         {auth.hydrated ? "true" : "false"}
       </span>
+
       <button
         onClick={() =>
           auth.login({
@@ -42,12 +30,18 @@ const TestConsumer = () => {
       >
         Login
       </button>
+
       <button onClick={auth.logout}>Logout</button>
     </div>
   );
 };
 
 describe("AuthContext", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    localStorage.clear();
+  });
+
   it("should render AuthProvider and hydrate", async () => {
     render(
       <AuthProvider>
@@ -58,7 +52,7 @@ describe("AuthContext", () => {
     expect(await screen.findByTestId("hydrated")).toHaveTextContent("true");
   });
 
-  it("should allow ADMIN login", async () => {
+  it("should allow ADMIN login and store data in localStorage", async () => {
     render(
       <AuthProvider>
         <TestConsumer />
@@ -69,19 +63,18 @@ describe("AuthContext", () => {
       screen.getByText("Login").click();
     });
 
-    expect(Cookies.set).toHaveBeenCalledWith(
+    expect(localStorage.setItem).toHaveBeenCalledWith(
       "token",
-      "fake-token",
-      expect.any(Object)
+      "fake-token"
     );
-    expect(Cookies.set).toHaveBeenCalledWith(
+
+    expect(localStorage.setItem).toHaveBeenCalledWith(
       "user",
-      expect.any(String),
-      expect.any(Object)
+      expect.any(String)
     );
   });
 
-  it("should clear cookies on logout", async () => {
+  it("should clear localStorage on logout", async () => {
     render(
       <AuthProvider>
         <TestConsumer />
@@ -92,7 +85,7 @@ describe("AuthContext", () => {
       screen.getByText("Logout").click();
     });
 
-    expect(Cookies.remove).toHaveBeenCalledWith("token");
-    expect(Cookies.remove).toHaveBeenCalledWith("user");
+    expect(localStorage.removeItem).toHaveBeenCalledWith("token");
+    expect(localStorage.removeItem).toHaveBeenCalledWith("user");
   });
 });

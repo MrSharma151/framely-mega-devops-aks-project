@@ -3,12 +3,8 @@ jest.mock("@/services/apiClient", () => ({
   default: require("../mocks/apiClient.mock").default,
 }));
 
-
 import apiClient from "@/services/apiClient";
 import { loginUser, logoutUser } from "@/services/authService";
-import Cookies from "js-cookie";
-
-jest.mock("js-cookie");
 
 describe("authService", () => {
   it("should call login API and return response data", async () => {
@@ -21,13 +17,18 @@ describe("authService", () => {
       password: "123456",
     });
 
-    expect(apiClient.post).toHaveBeenCalled();
+    expect(apiClient.post).toHaveBeenCalledWith("/Auth/login", {
+      email: "admin@test.com",
+      password: "123456",
+    });
+
     expect(res.token).toBe("fake-token");
   });
 
-  it("should clear cookies on logout", () => {
+  it("should clear localStorage and redirect on logout", () => {
     logoutUser();
-    expect(Cookies.remove).toHaveBeenCalledWith("token");
-    expect(Cookies.remove).toHaveBeenCalledWith("user");
+
+    expect(localStorage.removeItem).toHaveBeenCalledWith("token");
+    expect(localStorage.removeItem).toHaveBeenCalledWith("user");
   });
 });
