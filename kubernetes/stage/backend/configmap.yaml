@@ -29,8 +29,8 @@ data:
   # ------------------------------------------------------------
   # CORS Configuration (Stage - AKS Ingress domains)
   # ------------------------------------------------------------
-  FrontendOrigins__0: "https://framely-admin-sg.rohitsharma.org"
-  FrontendOrigins__1: "https://framely-sg.rohitsharma.org"
+  FrontendOrigins__0: "http://framely-admin-sg.rohitsharma.org"
+  FrontendOrigins__1: "http://framely-sg.rohitsharma.org"
 
   # ------------------------------------------------------------
   # Application Flags
