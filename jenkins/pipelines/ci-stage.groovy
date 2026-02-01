@@ -38,7 +38,7 @@ def run(APPS_CONFIG, IMAGES_CONFIG, REGISTRIES_CONFIG) {
     // NOTE:
     // apps.yaml remains environment-agnostic.
     // Environment binding happens here by design.
-    def STAGE_API_BASE_URL = "https://framely-api-sg.rohitsharma.org"
+    def STAGE_API_BASE_URL = "http://framely-api-sg.rohitsharma.org"
 
     APPS_CONFIG.apps.each { app ->
         if (app.type == 'frontend' && app.buildArgs) {
