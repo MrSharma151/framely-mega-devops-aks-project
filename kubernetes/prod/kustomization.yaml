@@ -39,4 +39,4 @@ images:
   newTag: 0.1.0-1741efa
 - name: framely-frontend-customer
   newName: acrframelystage.azurecr.io/framely-frontend-customer
-  newTag: 0.1.0-3f9896c
+  newTag: 0.1.0-1741efa
