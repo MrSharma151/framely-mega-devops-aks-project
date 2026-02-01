@@ -1,10 +1,9 @@
 import axios from "axios";
-import Cookies from "js-cookie";
 
-// 🔹 API base URL from environment (local + prod safe)
+// 🔹 API base URL (injected at build-time via Jenkins)
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://localhost:8081/api/v1"; // fallback for local dev
+  "http://localhost:8081/api/v1";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -13,11 +12,11 @@ const apiClient = axios.create({
   },
 });
 
-// Attaches JWT token from cookies to every outgoing request
+// 🔐 Attach JWT token from localStorage
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = Cookies.get("token");
+      const token = localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -27,7 +26,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handles global API errors and redirects unauthorized users
+// 🚨 Global API error handler
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -36,14 +35,13 @@ apiClient.interceptors.response.use(
 
     console.error("API Error:", message);
 
-    // Clears auth cookies and redirects if unauthorized
     if (status === 401 || status === 403) {
-      Cookies.remove("token");
-      Cookies.remove("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
       setTimeout(() => {
         window.location.href = "/auth/login";
-      }, 500);
+      }, 300);
     }
 
     return Promise.reject(error);
