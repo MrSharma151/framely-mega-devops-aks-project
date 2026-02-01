@@ -1,6 +1,6 @@
 import axios from "axios";
 
-// 🔹 API base URL (injected at build-time via Jenkins)
+// API base URL (injected at build-time via Jenkins)
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8081/api/v1";
@@ -12,7 +12,7 @@ const apiClient = axios.create({
   },
 });
 
-// 🔐 Attach JWT token from localStorage
+// Attach JWT token from localStorage
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
@@ -26,7 +26,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 🚨 Global API error handler
+// Global API error handler
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
