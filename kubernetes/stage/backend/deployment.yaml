@@ -31,13 +31,13 @@ spec:
                 - ALL
 
           # ------------------------------------------------------------
-          # ENVIRONMENT VARIABLES (🔥 THIS IS THE FIX)
+          # ENVIRONMENT VARIABLES FROM CONFIGMAP & SECRETS
           # ------------------------------------------------------------
           envFrom:
             - configMapRef:
                 name: backend-config
-            - secretRef:                # ✅ REQUIRED
-                name: backend-secrets   # ✅ REQUIRED
+            - secretRef:                # REQUIRED
+                name: backend-secrets   # REQUIRED
 
           # ------------------------------------------------------------
           # KEY VAULT CSI (debug / audit only)
