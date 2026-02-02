@@ -121,19 +121,6 @@ var frontendOrigins = builder.Configuration
     .GetSection("FrontendOrigins")
     .Get<string[]>();
 
-// 🔍 DEBUG: Print resolved CORS origins at startup
-Console.WriteLine("========== CORS Allowed Origins ==========");
-if (frontendOrigins != null && frontendOrigins.Length > 0)
-{
-    foreach (var origin in frontendOrigins)
-        Console.WriteLine($" - {origin}");
-}
-else
-{
-    Console.WriteLine(" - Using fallback origins");
-}
-Console.WriteLine("==========================================");
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -167,18 +154,6 @@ if (builder.Configuration.GetValue<bool>("Swagger:Enabled"))
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Framely API v1");
     });
 }
-
-
-// OPTIONS HANDLER (added)
-// app.Use(async (context, next) =>
-// {
-//     if (context.Request.Method == HttpMethods.Options)
-//     {
-//         context.Response.StatusCode = StatusCodes.Status200OK;
-//         return;
-//     }
-//     await next();
-// });
 
 // Step 10: Middleware pipeline
 // app.UseHttpsRedirection();

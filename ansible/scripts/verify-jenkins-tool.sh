@@ -23,6 +23,7 @@ run_check() {
   sudo -u "${JENKINS_USER}" bash -c "cd ${SAFE_DIR} && $cmd"
 }
 
+run_check "az --version"
 run_check "docker ps"
 run_check "git --version"
 run_check "dotnet --version"
