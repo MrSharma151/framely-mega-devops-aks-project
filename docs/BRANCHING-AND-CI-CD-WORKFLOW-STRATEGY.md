@@ -1,4 +1,5 @@
 
+---
 
 # 📘 Branching and CI/CD Workflow Strategy
 
@@ -28,7 +29,7 @@ This document is the **single reference** for understanding the delivery workflo
 * Jenkins performs **CI and GitOps updates only**
 * ArgoCD is the **only deployment engine**
 * No manual Kubernetes changes are allowed
-* Infrastructure lifecycle is separate from application delivery
+* Infrastructure lifecycle is decoupled from application delivery
 
 ---
 
@@ -41,8 +42,8 @@ The repository follows a **single-repository, environment-aligned branching mode
 | Branch  | Purpose                                 | Environment |
 | ------- | --------------------------------------- | ----------- |
 | `main`  | Design correctness and system contracts | None        |
-| `stage` | Integration and validation              | Stage       |
-| `prod`  | Stable releases                         | Production  |
+| `stage` | Integration and validation              | AKS (Stage) |
+| `prod`  | Stable releases                         | AKS (Prod)  |
 
 Only these branches are permanent.
 All deployments originate from these branches via GitOps.
@@ -73,7 +74,7 @@ prod   → CI + GitOps + manual deployment
 
 ### Purpose
 
-* Defines the desired system behavior
+* Defines desired system behavior
 * Holds clean, reviewed, and secure code
 * Must always remain buildable
 
@@ -102,7 +103,7 @@ Automatically executed:
 
 * Trivy runs in **report-only mode**
 * Vulnerabilities do **not fail** the pipeline
-* Used only for developer visibility
+* Used exclusively for developer visibility
 
 `main` validates **correctness**, not execution.
 
@@ -124,8 +125,7 @@ Automatically executed:
 
 * Full test suite
 * Security scans
-* Docker image build and tagging
-* Image push to registry
+* Docker image build and push
 * GitOps image tag updates
 
 ---
@@ -143,7 +143,7 @@ Automatically executed:
 * Vulnerabilities are reported
 * Pipeline does **not fail**, including HIGH severity findings
 
-This ensures visibility without blocking progress.
+This ensures visibility without blocking delivery.
 
 ---
 
@@ -152,7 +152,7 @@ This ensures visibility without blocking progress.
 ### Purpose
 
 * Represents the live system
-* Requires highest stability and control
+* Requires the highest level of stability and control
 
 ---
 
@@ -189,7 +189,7 @@ This project follows **strict GitOps rules**.
 ### Rules
 
 * Jenkins never deploys to Kubernetes
-* Jenkins only updates Git
+* Jenkins only mutates Git
 * ArgoCD is the only tool that applies manifests
 
 ---
@@ -201,13 +201,13 @@ This project follows **strict GitOps rules**.
 | Code and design changes          | `main`          |
 | Image tag updates (CI-generated) | `stage`, `prod` |
 
-This explains why CI-generated commits appear only in `stage` and `prod`.
+CI-generated commits appear **only** in deployment branches.
 
 ---
 
 ## 🏗 Infrastructure Workflow (Terraform)
 
-Infrastructure changes follow stricter controls than applications.
+Infrastructure changes are intentionally more controlled than application changes.
 
 | Branch  | Terraform Behavior  |
 | ------- | ------------------- |
@@ -215,7 +215,7 @@ Infrastructure changes follow stricter controls than applications.
 | `stage` | Plan + manual apply |
 | `prod`  | Plan + manual apply |
 
-Infrastructure is never auto-applied.
+Infrastructure is **never auto-applied**.
 
 ---
 
@@ -265,7 +265,7 @@ hotfix/<issue>
       main
 ```
 
-Used only for urgent fixes.
+Used only for critical production incidents.
 Back-merge to `main` is mandatory.
 
 ---
@@ -283,10 +283,11 @@ Back-merge to `main` is mandatory.
 ## 🏁 Final Notes
 
 * This strategy is **stable and finalized**
-* Designed for GitOps-based delivery
-* Compatible with both local and AKS environments
-* Scales from single-developer to team-based workflows
+* Designed for GitOps-based AKS delivery
+* Fully aligned with Jenkins and ArgoCD behavior
+* Scales from single-developer to team workflows
 
 This document defines the **authoritative branching and delivery model** for the Framely platform.
 
 ---
+

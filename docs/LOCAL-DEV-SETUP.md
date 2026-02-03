@@ -1,28 +1,31 @@
 
 
+---
+
 # 📘 Local Development Setup
 
 ## Framely – Mega DevOps AKS Project
 
-**Run the entire project on a single Linux machine (without AKS)**
+**Run the complete Framely platform locally on a single Linux machine (without AKS)**
 
 ---
 
 ## 🎯 Purpose of This Document
 
-This document explains **how to run and validate the complete Framely Mega DevOps Project locally** on **one Linux machine**, **without using Azure AKS**.
+This document explains **how to run and validate the Framely platform locally** on **one Linux machine**, **without using Azure AKS**.
 
-After following this guide, you will be able to:
+The local setup is intended for:
 
-* Prepare a Linux system with all required tools
-* Run the Framely applications locally
-* Validate CI pipelines using Jenkins
-* Validate GitOps workflows using ArgoCD
-* Validate Kubernetes deployments using KIND
-* Test the same workflows that are later migrated to AKS
+* Development and experimentation
+* CI and GitOps workflow validation
+* Debugging and learning purposes
+* Safe testing without cloud cost
 
-> This document focuses **only on local execution**.
-> **All implementation details, configuration values, repository URLs, and credentials are documented inside individual module `README.md` files.**
+> ⚠️ **Important Context**
+> The Framely platform is **already deployed and running on Azure AKS**.
+> This document exists to support **local validation**, not as the primary deployment model.
+
+All environment-specific configuration, credentials, and implementation details are documented in the respective module `README.md` files.
 
 ---
 
@@ -33,7 +36,7 @@ After following this guide, you will be able to:
 * RAM: 8 GB minimum (16 GB recommended)
 * Disk: 30 GB free space
 
-> Windows / macOS users must use **WSL2 (Ubuntu)** or a Linux VM.
+> Windows users must use **WSL2 (Ubuntu)** or a Linux VM.
 
 ---
 
@@ -124,7 +127,7 @@ cd framely
 
 This phase validates **application correctness only**, without Kubernetes or GitOps.
 
-### 📍 Docker Compose Location
+📍 **Location**
 
 ```
 apps/docker-compose.yml
@@ -138,13 +141,6 @@ apps/docker-compose.yml
 cd apps
 docker compose up -d
 ```
-
-This starts:
-
-* SQL Server database
-* Backend API
-* Frontend (Customer)
-* Frontend (Admin)
 
 ---
 
@@ -160,9 +156,9 @@ This starts:
 
 ### 🧪 Validation Checklist
 
-* Frontend applications load
-* Backend API responds
-* Database migrations complete successfully
+* Frontend applications load correctly
+* Backend API responds successfully
+* Database migrations complete without errors
 
 Stop services:
 
@@ -174,42 +170,16 @@ docker compose down
 
 # ☸️ Phase 2 – Create Local Kubernetes Cluster (KIND)
 
-This phase validates **Kubernetes + GitOps behavior**.
+This phase validates **Kubernetes and GitOps behavior locally**.
 
 ---
 
 ## 🆕 Create KIND Cluster
 
 ```bash
-mkdir -p ~/kind
-nano ~/kind/framely-dev.yaml
-```
-
-```yaml
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: framely-dev
-
-nodes:
-  - role: control-plane
-    image: kindest/node:v1.33.1
-    extraPortMappings:
-      - containerPort: 80
-        hostPort: 80
-      - containerPort: 443
-        hostPort: 443
-  - role: worker
-  - role: worker
-  - role: worker
-```
-
-Create and verify:
-
-```bash
 kind create cluster --config ~/kind/framely-dev.yaml
 kubectl config use-context kind-framely-dev
 kubectl get nodes
-kubectl cluster-info
 ```
 
 ---
@@ -218,13 +188,6 @@ kubectl cluster-info
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-```
-
-```bash
-kubectl wait -n ingress-nginx \
-  --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
-  --timeout=120s
 ```
 
 ---
@@ -237,97 +200,51 @@ Jenkins runs **directly on the host**, not inside Kubernetes.
 http://localhost:8000
 ```
 
-### 🔴 Mandatory Step (Do NOT Skip)
+> 🔴 **Mandatory**
+> Read `jenkins/README.md` before configuring Jenkins.
 
-Before configuring Jenkins:
+Jenkins locally validates:
 
-> **You MUST read and understand:**
-> 📘 `jenkins/README.md`
+* CI pipelines
+* Image builds
+* Security scanning
+* GitOps commits
 
-That document contains:
-
-* Required plugins
-* Jenkins job configuration
-* Repository URLs
-* Credentials & secrets
-* Pipeline behavior
-
-Without following that README, Jenkins **will not work correctly**.
-
-### Jenkins Responsibilities (Local)
-
-* Build application images
-* Run unit & integration tests
-* Scan images using Trivy
-* Push images to registry
-* Update GitOps manifests using Kustomize
-
-> Jenkins **never deploys to Kubernetes**.
+Jenkins **never deploys to Kubernetes**.
 
 ---
 
 # 🔄 Phase 4 – ArgoCD (Local GitOps Validation)
 
-Install ArgoCD into the KIND cluster:
+Install ArgoCD into the KIND cluster and apply **only ArgoCD Projects and Applications**.
 
-```bash
-kubectl create namespace argocd
-kubectl apply -n argocd \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+> ❌ Never apply application manifests manually
+> ✅ ArgoCD owns deployment
+
+Refer to:
+
 ```
-
-Port-forward UI access:
-
-```bash
-kubectl port-forward svc/argocd-server -n argocd 8081:443
+argocd/README.md
 ```
-
----
-
-### 🔴 Mandatory Rule (Very Important)
-
-❌ **Do NOT apply application Kubernetes manifests directly**
-
-✅ **Only apply ArgoCD Project and Application manifests**
-
-Before proceeding:
-
-> **You MUST read:**
-> 📘 `argocd/README.md`
-
-That document explains:
-
-* ArgoCD Projects
-* ArgoCD Applications
-* Repository structure
-* Sync behavior
-
-Once ArgoCD Applications are applied, **ArgoCD will automatically sync and deploy workloads**.
 
 ---
 
 # 📦 Phase 5 – GitOps Deployment via ArgoCD
-
-Apply only ArgoCD resources:
 
 ```bash
 kubectl apply -f argocd/projects/
 kubectl apply -f argocd/applications/
 ```
 
-> Application manifests under `kubernetes/`
-> are **managed exclusively by ArgoCD**.
+ArgoCD will reconcile workloads automatically.
 
 ---
 
 ## 📊 Optional – Local Monitoring
 
-For local observability:
+Prometheus and Grafana may be installed locally using Helm.
 
-* Prometheus and Grafana can be installed using **Helm charts**
-* This setup is **optional** for local testing
-
-📘 Refer to:
+Refer to:
 
 ```
 monitoring/README.md
@@ -335,20 +252,18 @@ monitoring/README.md
 
 ---
 
-## 🚫 Modules to Ignore for Local Testing
+## 🚫 Modules Not Used in Local Setup
 
-The following modules are **NOT required** for local execution:
+The following modules are **not required locally**:
 
-* `terraform/` → Infrastructure provisioning for Azure
+* `terraform/` → Azure infrastructure provisioning
 * `ansible/` → Jenkins VM configuration on Azure
 
-These are used **only when migrating to AKS**.
+These modules are **already applied in the AKS deployment**.
 
 ---
 
 ## 📚 Mandatory Documentation References
-
-Before running the full pipeline, **you must read**:
 
 | Area            | README                 |
 | --------------- | ---------------------- |
@@ -358,27 +273,16 @@ Before running the full pipeline, **you must read**:
 | Kubernetes      | `kubernetes/README.md` |
 | Monitoring      | `monitoring/README.md` |
 
-This document **does not duplicate** those details by design.
-
 ---
 
-## ⚠️ Important Migration Note
+## 🏁 Final Notes (Important)
 
-This same source code repository is later **migrated to Azure AKS**.
+* The Framely platform is **already deployed on Azure AKS**
+* Local setup exists for **validation, learning, and debugging**
+* CI/CD and GitOps behavior is **identical** between local and AKS
+* Only infrastructure-specific values differ
 
-During migration:
-
-* Some local configurations may fail
-* Environment-specific fixes may be required
-* Infrastructure values will change
-
-However:
-
-* **Application source code remains largely unchanged**
-* CI/CD logic stays the same
-* GitOps principles remain identical
-
-For full context, **read all project documentation before modifying configurations**.
+Local execution allows you to **experiment safely** without impacting live environments.
 
 ---
 
@@ -393,14 +297,14 @@ kind delete cluster --name framely-dev
 
 ## 🏁 Final Summary
 
-* Entire project can be tested on **one Linux machine**
-* No AKS or cloud resources required
-* Docker Compose validates application behavior
+* Full platform can be validated on **one Linux machine**
+* No cloud resources required for local testing
+* Docker Compose validates application logic
 * KIND + ArgoCD validate GitOps workflows
-* Jenkins validates CI pipelines
-* Terraform and Ansible are intentionally excluded
+* Jenkins validates CI behavior
+* AKS remains the **authoritative production runtime**
 
-This document enables **full local validation of the Framely Mega DevOps Project** before any cloud deployment.
+This document completes the **local validation guide** for the Framely Mega DevOps AKS Project.
 
 ---
 

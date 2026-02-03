@@ -1,5 +1,7 @@
 
 
+---
+
 # 📘 Kubernetes Manifests
 
 ## Framely – Mega DevOps AKS Project
@@ -14,10 +16,10 @@ It is the **authoritative source of truth** for how Framely workloads are:
 
 * Deployed
 * Configured
-* Operated
+* Exposed
 * Promoted across environments
 
-All deployments follow **strict GitOps principles**.
+All workloads are deployed using **strict GitOps principles** via ArgoCD.
 
 ---
 
@@ -26,46 +28,55 @@ All deployments follow **strict GitOps principles**.
 * No manual `kubectl apply` for application workloads
 * Jenkins **never deploys** to Kubernetes
 * ArgoCD is the **only deployment engine**
-* Git defines the **desired state**
+* Git defines the **entire desired state**
 
-Kubernetes clusters run **only what ArgoCD applies from Git**.
+Kubernetes clusters run **only what ArgoCD reconciles from Git**.
 
 ---
 
 ## 🎯 Design Goals
 
 * Production-grade Kubernetes manifests
-* Fully compatible with **Azure Kubernetes Service (AKS)**
+* First-class compatibility with **Azure Kubernetes Service (AKS)**
 * GitOps-first workflow using **ArgoCD**
-* Environment promotion via Git (`stage` → `prod`)
+* Clear separation of **stage** and **production**
 * Kustomize-based configuration for application workloads
-* Minimal, secure, and deterministic defaults
+* Secure, minimal, and deterministic defaults
 
 ---
 
-## 📂 Repository Structure
+## 📂 Module Structure
 
 ```text
 kubernetes/
-├── README.md              # Module documentation (this file)
-├── stage/                 # Stage / pre-production environment
+├── README.md
+│
+├── stage/                     # Pre-production / validation environment
 │   ├── namespace.yaml
 │   ├── ingress.yaml
 │   ├── kustomization.yaml
+│   │
 │   ├── backend/
 │   │   ├── deployment.yaml
 │   │   ├── service.yaml
-│   │   ├── secret.yaml
+│   │   ├── configmap.yaml
+│   │   ├── secretproviderclass.yaml
 │   │   └── kustomization.yaml
+│   │
 │   ├── frontend-admin/
 │   │   ├── deployment.yaml
 │   │   ├── service.yaml
 │   │   └── kustomization.yaml
-│   └── frontend-customer/
-│       ├── deployment.yaml
-│       ├── service.yaml
-│       └── kustomization.yaml
-└── prod/                  # Production environment
+│   │
+│   ├── frontend-customer/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── kustomization.yaml
+│   │
+│   └── monitoring/
+│       └── ingress.yaml
+│
+└── prod/                      # Production environment
     ├── namespace.yaml
     ├── ingress.yaml
     ├── kustomization.yaml
@@ -76,21 +87,27 @@ kubernetes/
 
 ---
 
-## 🔁 Environment Parity
+## 🔁 Environment Strategy (Intentional Differences)
 
-The **stage** and **prod** environments are **structurally identical**.
+The **stage** and **prod** environments are **conceptually aligned**, but **not identical by design**.
 
-Only environment-specific values differ, including:
+### Common Across Environments
 
-* Namespace names
-* Secrets
-* Ingress hostnames
+* Same applications
+* Same container images
+* Same Kustomize structure
+* Same GitOps workflow via ArgoCD
 
-This ensures:
+### Intentional Differences
 
-* Predictable promotions
-* Minimal configuration drift
-* Reduced production risk
+| Aspect      | Stage                       | Production                       |
+| ----------- | --------------------------- | -------------------------------- |
+| Purpose     | Validation & testing        | Customer-facing workloads        |
+| Secrets     | CSI + SecretProviderClass   | Kubernetes Secrets               |
+| Monitoring  | Ingress exposed for tooling | Not exposed by default           |
+| Sync policy | Auto-sync (via ArgoCD)      | Manual sync (controlled release) |
+
+This approach balances **security, realism, and operational safety**.
 
 ---
 
@@ -98,24 +115,24 @@ This ensures:
 
 ### 1️⃣ GitOps-First Model
 
-* Git defines the desired state
+* Git defines desired state
 * ArgoCD continuously reconciles cluster state
-* Jenkins updates **image tags only** via Git commits
-* No imperative or manual deployments
+* Jenkins updates **image tags only**
+* No imperative or ad-hoc deployments
 
-Promotion between environments is a **Git operation**, not a runtime command.
+Promotion between environments is a **Git operation**, not a runtime action.
 
 ---
 
 ### 2️⃣ Stateless Application Design
 
-All workloads are intentionally **stateless**:
+All workloads are **stateless by design**:
 
 * No local filesystem dependency
 * Safe pod restarts
 * Horizontal scaling supported
 
-Application state is externalized to managed services:
+Persistent state is externalized to managed services:
 
 * Azure SQL Database
 * Azure Blob Storage
@@ -124,11 +141,15 @@ Application state is externalized to managed services:
 
 ### 3️⃣ Kustomize-Only for Applications
 
-* Application workloads use **Kustomize only**
-* Helm is reserved for **platform tooling**
-* Image updates are managed via `kustomize edit set image`
+* Application manifests use **Kustomize exclusively**
+* Helm is reserved for **platform tooling** (ingress, monitoring, etc.)
+* Image updates are applied using:
 
-This ensures clean Git diffs and deterministic ArgoCD sync behavior.
+  ```bash
+  kustomize edit set image
+  ```
+
+This guarantees clean Git diffs and predictable ArgoCD behavior.
 
 ---
 
@@ -146,9 +167,14 @@ This ensures clean Git diffs and deterministic ArgoCD sync behavior.
 **Kubernetes Characteristics**
 
 * Stateless Deployment
-* Liveness, readiness, and startup probes
+* Health probes (liveness, readiness, startup)
 * Hardened `securityContext`
-* Secrets injected via Kubernetes Secrets
+* Environment-driven configuration
+
+**Secrets Strategy**
+
+* Stage: Azure Key Vault via CSI (`SecretProviderClass`)
+* Prod: Kubernetes Secrets
 
 ---
 
@@ -156,7 +182,7 @@ This ensures clean Git diffs and deterministic ArgoCD sync behavior.
 
 **Responsibilities**
 
-* Administrative dashboard
+* Internal administrative dashboard
 * Product and order management
 
 **Kubernetes Characteristics**
@@ -176,62 +202,8 @@ This ensures clean Git diffs and deterministic ArgoCD sync behavior.
 **Kubernetes Characteristics**
 
 * Stateless architecture
-* Ingress and CDN-friendly
+* Ingress-friendly routing
 * Same build-time configuration model as Admin UI
-
----
-
-## ⚙️ Configuration Strategy
-
-### Backend Configuration
-
-* Fully driven by environment variables
-* Sensitive values stored in **Kubernetes Secrets**
-
-Examples include:
-
-* Database connection strings
-* JWT signing keys
-* Storage credentials
-
----
-
-### Frontend Configuration
-
-* `NEXT_PUBLIC_*` variables are **build-time only**
-* Injected during CI image builds
-* Kubernetes manifests document the contract only
-
-This behavior is **intentional and correct** for Next.js applications.
-
----
-
-## 🔐 Security Model
-
-### Pod-Level Security
-
-All workloads enforce:
-
-* Non-root container execution
-* No privilege escalation
-* Read-only root filesystem
-* Dropped Linux capabilities
-
-This aligns with **Kubernetes Restricted Pod Security Standards**.
-
----
-
-### Secrets Management
-
-* Secrets are isolated and explicitly defined
-* No inline secrets in Deployment manifests
-* Structure is compatible with:
-
-  * Sealed Secrets
-  * SOPS
-  * External Secrets Operator
-
-(Currently stored as plain YAML for clarity.)
 
 ---
 
@@ -248,8 +220,8 @@ This aligns with **Kubernetes Restricted Pod Security Standards**.
 
 ### TLS Strategy
 
-* TLS is intentionally excluded from manifests
-* Cloud-specific TLS is handled externally (e.g., cert-manager, Application Gateway, Front Door)
+* TLS is intentionally excluded from application manifests
+* TLS termination is handled externally (e.g., cert-manager, Front Door, Application Gateway)
 * No application changes are required to enable TLS
 
 ---
@@ -265,22 +237,14 @@ This aligns with **Kubernetes Restricted Pod Security Standards**.
 3. Jenkins commits updated image tags to Git
 4. ArgoCD detects Git changes
 5. ArgoCD synchronizes manifests
-6. Cluster converges to the declared state
-
----
-
-## 🧪 Local and Pre-Production Validation
-
-* Manifests are validated using **KIND**
-* Stage mirrors production behavior
-* Production differences are configuration-only
+6. Cluster converges to declared state
 
 ---
 
 ## 📌 Usage Constraints
 
 * Do not apply application manifests manually
-* Do not modify cluster state outside Git
+* Do not mutate cluster state outside Git
 * All deployments must flow through ArgoCD
 * Kustomize overlays must remain deterministic
 
@@ -288,11 +252,12 @@ This aligns with **Kubernetes Restricted Pod Security Standards**.
 
 ## 🏁 Final Notes
 
-* This directory is **finalized and stable**
-* Manifests are **AKS-ready**
-* GitOps behavior is **deterministic and auditable**
-* Provides a clean foundation for future scaling
+* This directory reflects **running AKS workloads**
+* Environment differences are **intentional and documented**
+* GitOps behavior is **auditable and deterministic**
+* Provides a stable foundation for future scaling
 
 This directory defines the **authoritative Kubernetes deployment model** for the Framely platform.
 
 ---
+
