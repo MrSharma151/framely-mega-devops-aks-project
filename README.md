@@ -27,7 +27,6 @@ This project was created to:
 * 🔄 Design a **production-style CI/CD + GitOps workflow**
 * ☸️ Build and operate a **Kubernetes-based delivery platform on AKS**
 * ⚖️ Compare **PaaS vs Kubernetes/IaaS delivery models**
-* 🎯 Serve as a **hands-on, interview-ready reference project**
 
 > ⚠️ This is a **personal learning and showcase project**, not a commercial product.
 
