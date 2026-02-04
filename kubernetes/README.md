@@ -247,22 +247,61 @@ This guarantees clean Git diffs and predictable ArgoCD behavior.
 
 ---
 
+
 ## 🌐 Ingress and Networking
 
-* Single **NGINX Ingress** per environment
-* Path-based routing
+Framely uses **subdomain-based routing** via a single **NGINX Ingress Controller** per environment.
 
-| Path       | Service           |
-| ---------- | ----------------- |
-| `/api/*`   | Backend API       |
-| `/admin/*` | Frontend Admin    |
-| `/app/*`   | Frontend Customer |
+Each application component is exposed using a **dedicated hostname**, providing clean separation, better security boundaries, and production-aligned routing.
+
+### Routing Model
+
+| Subdomain                    | Service           | Purpose                   |
+| ---------------------------- | ----------------- | ------------------------- |
+| `framely-api-<env>.domain`   | Backend API       | Application API endpoints |
+| `framely-<env>.domain`       | Frontend Customer | Public storefront         |
+| `framely-admin-<env>.domain` | Frontend Admin    | Administrative dashboard  |
+
+> Example (Stage environment):
+>
+> * `framely-api-sg.rohitsharma.org` → Backend API
+> * `framely-sg.rohitsharma.org` → Customer UI
+> * `framely-admin-sg.rohitsharma.org` → Admin UI
+
+### Design Rationale
+
+* Subdomain-based routing mirrors real-world production setups
+* Clean separation between public, admin, and API traffic
+* Simpler frontend configuration (no path rewrites)
+* CDN- and WAF-friendly architecture
+* Easier TLS and certificate management per service
+
+---
 
 ### TLS Strategy
 
-* TLS is intentionally excluded from application manifests
-* TLS termination is handled externally (e.g., cert-manager, Front Door, Application Gateway)
-* No application changes are required to enable TLS
+* TLS configuration is **intentionally excluded** from application manifests
+* Ingress manifests are **TLS-ready** and compatible with:
+
+  * cert-manager
+  * Azure Application Gateway
+  * Azure Front Door
+* TLS can be enabled later without:
+
+  * Modifying application code
+  * Changing deployment manifests
+  * Breaking GitOps workflows
+
+This approach keeps manifests **environment-agnostic**, **secure**, and **production-aligned**.
+
+---
+
+### Key Notes
+
+* Ingress resources are applied **only via ArgoCD**
+* No manual changes are performed inside the cluster
+* Azure automatically provisions the external LoadBalancer when the NGINX Ingress Service is created
+
 
 ---
 
