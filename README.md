@@ -17,6 +17,14 @@ This repository represents a **cloud-native, Kubernetes-first delivery model** f
 > ✅ **The platform is fully deployed and tested on Azure Kubernetes Service (AKS).**
 > Local setup exists only for validation, learning, and debugging.
 
+## 🎥 Project Walkthrough
+
+A short video walkthrough demonstrating the complete AKS-based
+DevOps and GitOps workflow implemented in this repository.
+
+▶️ https://www.youtube.com/watch?v=UNNiRSG4tmo
+
+
 ---
 
 ## 🚀 Why This Project Exists

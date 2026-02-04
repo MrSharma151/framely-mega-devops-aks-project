@@ -22,7 +22,7 @@ The local setup is intended for:
 * Safe testing without cloud cost
 
 > ⚠️ **Important Context**
-> The Framely platform is **already deployed and running on Azure AKS**.
+> The Framely platform is **already deployed and tested on Azure AKS**.
 > This document exists to support **local validation**, not as the primary deployment model.
 
 All environment-specific configuration, credentials, and implementation details are documented in the respective module `README.md` files.

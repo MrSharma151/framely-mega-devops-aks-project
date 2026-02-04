@@ -19,7 +19,7 @@ It is the **authoritative source of truth** for how Framely workloads are:
 * Exposed
 * Promoted across environments
 
-All workloads are deployed using **strict GitOps principles** via ArgoCD.
+All workloads are deployed using **strict GitOps principles** via **ArgoCD**.
 
 ---
 
@@ -39,7 +39,7 @@ Kubernetes clusters run **only what ArgoCD reconciles from Git**.
 * Production-grade Kubernetes manifests
 * First-class compatibility with **Azure Kubernetes Service (AKS)**
 * GitOps-first workflow using **ArgoCD**
-* Clear separation of **stage** and **production**
+* Clear separation of **stage** and **production** environments
 * Kustomize-based configuration for application workloads
 * Secure, minimal, and deterministic defaults
 
@@ -76,7 +76,7 @@ kubernetes/
 │   └── monitoring/
 │       └── ingress.yaml
 │
-└── prod/                      # Production environment
+└── prod/                      # Production environment (defined, not provisioned)
     ├── namespace.yaml
     ├── ingress.yaml
     ├── kustomization.yaml
@@ -87,27 +87,67 @@ kubernetes/
 
 ---
 
-## 🔁 Environment Strategy (Intentional Differences)
+## 🔁 Environment Strategy (Intentional Design)
 
-The **stage** and **prod** environments are **conceptually aligned**, but **not identical by design**.
+The Framely platform follows a **two-environment Kubernetes model**:
 
-### Common Across Environments
+* `stage` – actively provisioned and validated on AKS
+* `prod` – fully defined and production-ready, but **not provisioned**
 
-* Same applications
-* Same container images
-* Same Kustomize structure
-* Same GitOps workflow via ArgoCD
+This approach ensures **environment parity** while maintaining **responsible cloud cost management**.
 
-### Intentional Differences
+---
 
-| Aspect      | Stage                       | Production                       |
-| ----------- | --------------------------- | -------------------------------- |
-| Purpose     | Validation & testing        | Customer-facing workloads        |
-| Secrets     | CSI + SecretProviderClass   | Kubernetes Secrets               |
-| Monitoring  | Ingress exposed for tooling | Not exposed by default           |
-| Sync policy | Auto-sync (via ArgoCD)      | Manual sync (controlled release) |
+## 🚦 Environment Provisioning Status (Important Context)
 
-This approach balances **security, realism, and operational safety**.
+At the current stage of this project, **only the `stage` Kubernetes environment is provisioned and deployed on AKS**.
+
+The `prod` environment manifests are **intentionally present but not applied to a live cluster**.
+
+### Why Production Was Not Provisioned
+
+This decision was **intentional and cost-aware**, based on the following factors:
+
+* `stage` and `prod` environments are:
+
+  * Structurally identical
+  * Architecturally aligned
+  * Governed by the same GitOps workflows
+* The same:
+
+  * Applications
+  * Container images
+  * Kustomize layout
+  * ArgoCD configuration
+* exist across both environments
+* Provisioning a second AKS cluster would provide **minimal additional learning value** while **doubling cloud cost**
+
+For this reason, **all functional validation and testing was performed using the `stage` environment only**.
+
+---
+
+## 🔐 Implications for Kubernetes Manifests
+
+Because the `prod` environment is **not actively provisioned**, some production-only integrations are:
+
+* Defined conceptually
+* Structurally prepared
+* Not exercised against a live cluster
+
+These include:
+
+* CSI-based secret consumption
+* Environment-specific secret hardening
+* Production-only exposure and ingress constraints
+
+These configurations are **intentionally deferred**, not missing due to design gaps.
+
+Provisioning production would require only:
+
+1. Creating the AKS cluster via Terraform
+2. Applying the existing `prod/` manifests via ArgoCD
+
+No architectural or CI/CD changes would be required.
 
 ---
 
@@ -145,9 +185,9 @@ Persistent state is externalized to managed services:
 * Helm is reserved for **platform tooling** (ingress, monitoring, etc.)
 * Image updates are applied using:
 
-  ```bash
-  kustomize edit set image
-  ```
+```bash
+kustomize edit set image
+```
 
 This guarantees clean Git diffs and predictable ArgoCD behavior.
 
@@ -174,7 +214,7 @@ This guarantees clean Git diffs and predictable ArgoCD behavior.
 **Secrets Strategy**
 
 * Stage: Azure Key Vault via CSI (`SecretProviderClass`)
-* Prod: Kubernetes Secrets
+* Prod: Kubernetes Secrets (defined, not applied)
 
 ---
 
@@ -252,10 +292,10 @@ This guarantees clean Git diffs and predictable ArgoCD behavior.
 
 ## 🏁 Final Notes
 
-* This directory reflects **running AKS workloads**
-* Environment differences are **intentional and documented**
+* This directory reflects **running AKS workloads (stage environment)** and **production-ready manifests**
+* Environment differences are **intentional, documented, and reversible**
 * GitOps behavior is **auditable and deterministic**
-* Provides a stable foundation for future scaling
+* The design prioritizes **correctness, parity, and cost awareness**
 
 This directory defines the **authoritative Kubernetes deployment model** for the Framely platform.
 

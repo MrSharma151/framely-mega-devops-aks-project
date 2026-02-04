@@ -1,4 +1,5 @@
 
+
 ---
 
 # 📘 Terraform Infrastructure
@@ -117,6 +118,38 @@ Each environment is:
 
 ---
 
+## 🔁 Environment Provisioning Status (Clarification)
+
+At the current stage of this project, **only the `stage` environment infrastructure is provisioned on Azure**.
+
+The `prod` Terraform configuration is:
+
+* Fully defined
+* Structurally identical to `stage`
+* Intentionally **not applied**
+
+### Rationale
+
+This was a **deliberate, cost-aware decision**:
+
+* `stage` and `prod` environments share the same:
+
+  * Architecture
+  * Terraform modules
+  * AKS configuration
+  * CI/CD and GitOps workflows
+* Provisioning a second AKS cluster would **double cloud cost** without providing additional learning or validation value
+
+For this reason, **all infrastructure validation and platform testing was performed using the `stage` environment only**.
+
+### Important Note
+
+Provisioning production would require **only running `terraform apply`** for the `prod` environment.
+
+No module changes, architectural refactoring, or CI/CD updates would be required.
+
+---
+
 ## 🔐 Terraform State Management
 
 Terraform uses an **Azure Storage remote backend**.
@@ -196,6 +229,8 @@ Private endpoints are intentionally deferred.
 * Autoscaling enabled
 * Cost-controlled limits
 
+Node pools are intentionally not over-segmented.
+
 ---
 
 ## 🌐 Load Balancer Responsibility (Important Clarification)
@@ -204,7 +239,7 @@ Azure Load Balancers are **not provisioned by Terraform** in this project.
 
 They are **automatically created and managed by Azure** when:
 
-* A Kubernetes `Service` of type `LoadBalancer` is applied
+* An ingress-nginx `Service` of type `LoadBalancer` is applied
 * The manifest is deployed by **ArgoCD**
 
 Terraform’s responsibility ends at **AKS cluster provisioning**.
@@ -302,7 +337,7 @@ Over-engineering is intentionally avoided.
 
 ## 🏁 Final Notes
 
-* Infrastructure is fully defined as code
+* Infrastructure is fully defined as code (**stage applied, prod defined**)
 * Responsibility boundaries are explicit
 * AKS-native behavior is respected
 * GitOps delivery remains clean and deterministic
@@ -310,4 +345,5 @@ Over-engineering is intentionally avoided.
 This directory defines the **authoritative Azure infrastructure model** for the Framely platform.
 
 ---
+
 
