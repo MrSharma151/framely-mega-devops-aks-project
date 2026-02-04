@@ -1,4 +1,5 @@
 
+---
 
 # 📘 Ansible – Jenkins VM Configuration
 
@@ -8,14 +9,14 @@
 
 ## 🎯 Module Objective
 
-This Ansible module configures an **already provisioned Azure Virtual Machine** as a **production-ready Jenkins CI server** for the Framely Mega DevOps AKS Project.
+This Ansible module configures an **already provisioned Azure Virtual Machine** as a **production-grade Jenkins CI server** for the Framely Mega DevOps AKS Project.
 
 The objective of this module is to ensure that the Jenkins VM:
 
 * Has **all required CI, GitOps, and DevSecOps tooling installed**
-* Executes pipelines **identically to the local development environment**
+* Executes pipelines **consistently and deterministically**
 * Remains **fully reproducible and idempotent**
-* Is ready for **AKS-based delivery workflows** without manual intervention
+* Integrates cleanly with an **AKS-based delivery pipeline**
 
 > ⚠️ **Important**
 > This module **does not provision infrastructure**.
@@ -31,7 +32,7 @@ This module is responsible for:
 
 * Configuring an **existing Azure VM** as a Jenkins CI server
 * Installing **system-level dependencies** required by CI pipelines
-* Ensuring **tool accessibility for the Jenkins system user**
+* Ensuring **tool availability for the Jenkins system user**
 * Preparing the VM for:
 
   * CI pipelines
@@ -46,8 +47,8 @@ This module explicitly **does not**:
 
 * Provision Azure infrastructure
 * Deploy applications
-* Run `kubectl apply`
-* Interact with Kubernetes or AKS
+* Apply Kubernetes manifests
+* Interact directly with AKS clusters
 * Configure Jenkins jobs, pipelines, or plugins
 
 > **Infrastructure → Terraform**
@@ -126,7 +127,7 @@ Docker installation and configuration:
 * Adds `jenkins` user to `docker` group
 * Enables Docker usage without `sudo`
 
-> Mandatory for all CI pipelines
+> Required for all CI pipelines
 
 ---
 
@@ -139,7 +140,7 @@ Jenkins runtime setup:
 * Jenkins system service configuration
 * Ensures Jenkins runs as the `jenkins` system user
 
-> Jenkins plugins and jobs are **intentionally excluded**
+> Jenkins plugins and job configuration are **intentionally excluded**
 
 ---
 
@@ -148,8 +149,8 @@ Jenkins runtime setup:
 Backend CI dependencies:
 
 * .NET SDK **9.x**
-* Installed using the official Microsoft installer
-* Available globally for Jenkins pipelines
+* Installed via official Microsoft packages
+* Available system-wide for Jenkins pipelines
 
 ---
 
@@ -186,7 +187,7 @@ DevSecOps security tooling:
 
 Jenkins runs as a **non-root system user (`jenkins`)**.
 
-To guarantee pipeline reliability:
+To ensure pipeline reliability:
 
 * All tools are installed **system-wide**
 * No user-specific installations (`nvm`, `~/.dotnet`, etc.)
@@ -262,12 +263,12 @@ Successful execution confirms:
 ## 🏁 Final Notes
 
 * This module is **production-grade**
-* Mirrors enterprise CI server configurations
-* Designed for **seamless AKS migration**
+* Actively supports an **AKS-backed delivery pipeline**
 * Clean, deterministic, and reproducible
+* Designed to keep **CI stable while infrastructure evolves**
 
-> **Infrastructure may change.
-> CI logic remains constant.**
+> **Infrastructure evolves.
+> CI remains deterministic.**
 
 ---
 

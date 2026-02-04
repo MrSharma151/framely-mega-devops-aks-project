@@ -1,5 +1,7 @@
 
 
+---
+
 # 📘 Kubernetes Manifests
 
 ## Framely – Mega DevOps AKS Project
@@ -14,10 +16,10 @@ It is the **authoritative source of truth** for how Framely workloads are:
 
 * Deployed
 * Configured
-* Operated
+* Exposed
 * Promoted across environments
 
-All deployments follow **strict GitOps principles**.
+All workloads are deployed using **strict GitOps principles** via **ArgoCD**.
 
 ---
 
@@ -26,46 +28,55 @@ All deployments follow **strict GitOps principles**.
 * No manual `kubectl apply` for application workloads
 * Jenkins **never deploys** to Kubernetes
 * ArgoCD is the **only deployment engine**
-* Git defines the **desired state**
+* Git defines the **entire desired state**
 
-Kubernetes clusters run **only what ArgoCD applies from Git**.
+Kubernetes clusters run **only what ArgoCD reconciles from Git**.
 
 ---
 
 ## 🎯 Design Goals
 
 * Production-grade Kubernetes manifests
-* Fully compatible with **Azure Kubernetes Service (AKS)**
+* First-class compatibility with **Azure Kubernetes Service (AKS)**
 * GitOps-first workflow using **ArgoCD**
-* Environment promotion via Git (`stage` → `prod`)
+* Clear separation of **stage** and **production** environments
 * Kustomize-based configuration for application workloads
-* Minimal, secure, and deterministic defaults
+* Secure, minimal, and deterministic defaults
 
 ---
 
-## 📂 Repository Structure
+## 📂 Module Structure
 
 ```text
 kubernetes/
-├── README.md              # Module documentation (this file)
-├── stage/                 # Stage / pre-production environment
+├── README.md
+│
+├── stage/                     # Pre-production / validation environment
 │   ├── namespace.yaml
 │   ├── ingress.yaml
 │   ├── kustomization.yaml
+│   │
 │   ├── backend/
 │   │   ├── deployment.yaml
 │   │   ├── service.yaml
-│   │   ├── secret.yaml
+│   │   ├── configmap.yaml
+│   │   ├── secretproviderclass.yaml
 │   │   └── kustomization.yaml
+│   │
 │   ├── frontend-admin/
 │   │   ├── deployment.yaml
 │   │   ├── service.yaml
 │   │   └── kustomization.yaml
-│   └── frontend-customer/
-│       ├── deployment.yaml
-│       ├── service.yaml
-│       └── kustomization.yaml
-└── prod/                  # Production environment
+│   │
+│   ├── frontend-customer/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── kustomization.yaml
+│   │
+│   └── monitoring/
+│       └── ingress.yaml
+│
+└── prod/                      # Production environment (defined, not provisioned)
     ├── namespace.yaml
     ├── ingress.yaml
     ├── kustomization.yaml
@@ -76,21 +87,67 @@ kubernetes/
 
 ---
 
-## 🔁 Environment Parity
+## 🔁 Environment Strategy (Intentional Design)
 
-The **stage** and **prod** environments are **structurally identical**.
+The Framely platform follows a **two-environment Kubernetes model**:
 
-Only environment-specific values differ, including:
+* `stage` – actively provisioned and validated on AKS
+* `prod` – fully defined and production-ready, but **not provisioned**
 
-* Namespace names
-* Secrets
-* Ingress hostnames
+This approach ensures **environment parity** while maintaining **responsible cloud cost management**.
 
-This ensures:
+---
 
-* Predictable promotions
-* Minimal configuration drift
-* Reduced production risk
+## 🚦 Environment Provisioning Status (Important Context)
+
+At the current stage of this project, **only the `stage` Kubernetes environment is provisioned and deployed on AKS**.
+
+The `prod` environment manifests are **intentionally present but not applied to a live cluster**.
+
+### Why Production Was Not Provisioned
+
+This decision was **intentional and cost-aware**, based on the following factors:
+
+* `stage` and `prod` environments are:
+
+  * Structurally identical
+  * Architecturally aligned
+  * Governed by the same GitOps workflows
+* The same:
+
+  * Applications
+  * Container images
+  * Kustomize layout
+  * ArgoCD configuration
+* exist across both environments
+* Provisioning a second AKS cluster would provide **minimal additional learning value** while **doubling cloud cost**
+
+For this reason, **all functional validation and testing was performed using the `stage` environment only**.
+
+---
+
+## 🔐 Implications for Kubernetes Manifests
+
+Because the `prod` environment is **not actively provisioned**, some production-only integrations are:
+
+* Defined conceptually
+* Structurally prepared
+* Not exercised against a live cluster
+
+These include:
+
+* CSI-based secret consumption
+* Environment-specific secret hardening
+* Production-only exposure and ingress constraints
+
+These configurations are **intentionally deferred**, not missing due to design gaps.
+
+Provisioning production would require only:
+
+1. Creating the AKS cluster via Terraform
+2. Applying the existing `prod/` manifests via ArgoCD
+
+No architectural or CI/CD changes would be required.
 
 ---
 
@@ -98,24 +155,24 @@ This ensures:
 
 ### 1️⃣ GitOps-First Model
 
-* Git defines the desired state
+* Git defines desired state
 * ArgoCD continuously reconciles cluster state
-* Jenkins updates **image tags only** via Git commits
-* No imperative or manual deployments
+* Jenkins updates **image tags only**
+* No imperative or ad-hoc deployments
 
-Promotion between environments is a **Git operation**, not a runtime command.
+Promotion between environments is a **Git operation**, not a runtime action.
 
 ---
 
 ### 2️⃣ Stateless Application Design
 
-All workloads are intentionally **stateless**:
+All workloads are **stateless by design**:
 
 * No local filesystem dependency
 * Safe pod restarts
 * Horizontal scaling supported
 
-Application state is externalized to managed services:
+Persistent state is externalized to managed services:
 
 * Azure SQL Database
 * Azure Blob Storage
@@ -124,11 +181,15 @@ Application state is externalized to managed services:
 
 ### 3️⃣ Kustomize-Only for Applications
 
-* Application workloads use **Kustomize only**
-* Helm is reserved for **platform tooling**
-* Image updates are managed via `kustomize edit set image`
+* Application manifests use **Kustomize exclusively**
+* Helm is reserved for **platform tooling** (ingress, monitoring, etc.)
+* Image updates are applied using:
 
-This ensures clean Git diffs and deterministic ArgoCD sync behavior.
+```bash
+kustomize edit set image
+```
+
+This guarantees clean Git diffs and predictable ArgoCD behavior.
 
 ---
 
@@ -146,9 +207,14 @@ This ensures clean Git diffs and deterministic ArgoCD sync behavior.
 **Kubernetes Characteristics**
 
 * Stateless Deployment
-* Liveness, readiness, and startup probes
+* Health probes (liveness, readiness, startup)
 * Hardened `securityContext`
-* Secrets injected via Kubernetes Secrets
+* Environment-driven configuration
+
+**Secrets Strategy**
+
+* Stage: Azure Key Vault via CSI (`SecretProviderClass`)
+* Prod: Kubernetes Secrets (defined, not applied)
 
 ---
 
@@ -156,7 +222,7 @@ This ensures clean Git diffs and deterministic ArgoCD sync behavior.
 
 **Responsibilities**
 
-* Administrative dashboard
+* Internal administrative dashboard
 * Product and order management
 
 **Kubernetes Characteristics**
@@ -176,81 +242,66 @@ This ensures clean Git diffs and deterministic ArgoCD sync behavior.
 **Kubernetes Characteristics**
 
 * Stateless architecture
-* Ingress and CDN-friendly
+* Ingress-friendly routing
 * Same build-time configuration model as Admin UI
 
 ---
 
-## ⚙️ Configuration Strategy
-
-### Backend Configuration
-
-* Fully driven by environment variables
-* Sensitive values stored in **Kubernetes Secrets**
-
-Examples include:
-
-* Database connection strings
-* JWT signing keys
-* Storage credentials
-
----
-
-### Frontend Configuration
-
-* `NEXT_PUBLIC_*` variables are **build-time only**
-* Injected during CI image builds
-* Kubernetes manifests document the contract only
-
-This behavior is **intentional and correct** for Next.js applications.
-
----
-
-## 🔐 Security Model
-
-### Pod-Level Security
-
-All workloads enforce:
-
-* Non-root container execution
-* No privilege escalation
-* Read-only root filesystem
-* Dropped Linux capabilities
-
-This aligns with **Kubernetes Restricted Pod Security Standards**.
-
----
-
-### Secrets Management
-
-* Secrets are isolated and explicitly defined
-* No inline secrets in Deployment manifests
-* Structure is compatible with:
-
-  * Sealed Secrets
-  * SOPS
-  * External Secrets Operator
-
-(Currently stored as plain YAML for clarity.)
-
----
 
 ## 🌐 Ingress and Networking
 
-* Single **NGINX Ingress** per environment
-* Path-based routing
+Framely uses **subdomain-based routing** via a single **NGINX Ingress Controller** per environment.
 
-| Path       | Service           |
-| ---------- | ----------------- |
-| `/api/*`   | Backend API       |
-| `/admin/*` | Frontend Admin    |
-| `/app/*`   | Frontend Customer |
+Each application component is exposed using a **dedicated hostname**, providing clean separation, better security boundaries, and production-aligned routing.
+
+### Routing Model
+
+| Subdomain                    | Service           | Purpose                   |
+| ---------------------------- | ----------------- | ------------------------- |
+| `framely-api-<env>.domain`   | Backend API       | Application API endpoints |
+| `framely-<env>.domain`       | Frontend Customer | Public storefront         |
+| `framely-admin-<env>.domain` | Frontend Admin    | Administrative dashboard  |
+
+> Example (Stage environment):
+>
+> * `framely-api-sg.rohitsharma.org` → Backend API
+> * `framely-sg.rohitsharma.org` → Customer UI
+> * `framely-admin-sg.rohitsharma.org` → Admin UI
+
+### Design Rationale
+
+* Subdomain-based routing mirrors real-world production setups
+* Clean separation between public, admin, and API traffic
+* Simpler frontend configuration (no path rewrites)
+* CDN- and WAF-friendly architecture
+* Easier TLS and certificate management per service
+
+---
 
 ### TLS Strategy
 
-* TLS is intentionally excluded from manifests
-* Cloud-specific TLS is handled externally (e.g., cert-manager, Application Gateway, Front Door)
-* No application changes are required to enable TLS
+* TLS configuration is **intentionally excluded** from application manifests
+* Ingress manifests are **TLS-ready** and compatible with:
+
+  * cert-manager
+  * Azure Application Gateway
+  * Azure Front Door
+* TLS can be enabled later without:
+
+  * Modifying application code
+  * Changing deployment manifests
+  * Breaking GitOps workflows
+
+This approach keeps manifests **environment-agnostic**, **secure**, and **production-aligned**.
+
+---
+
+### Key Notes
+
+* Ingress resources are applied **only via ArgoCD**
+* No manual changes are performed inside the cluster
+* Azure automatically provisions the external LoadBalancer when the NGINX Ingress Service is created
+
 
 ---
 
@@ -265,22 +316,14 @@ This aligns with **Kubernetes Restricted Pod Security Standards**.
 3. Jenkins commits updated image tags to Git
 4. ArgoCD detects Git changes
 5. ArgoCD synchronizes manifests
-6. Cluster converges to the declared state
-
----
-
-## 🧪 Local and Pre-Production Validation
-
-* Manifests are validated using **KIND**
-* Stage mirrors production behavior
-* Production differences are configuration-only
+6. Cluster converges to declared state
 
 ---
 
 ## 📌 Usage Constraints
 
 * Do not apply application manifests manually
-* Do not modify cluster state outside Git
+* Do not mutate cluster state outside Git
 * All deployments must flow through ArgoCD
 * Kustomize overlays must remain deterministic
 
@@ -288,11 +331,12 @@ This aligns with **Kubernetes Restricted Pod Security Standards**.
 
 ## 🏁 Final Notes
 
-* This directory is **finalized and stable**
-* Manifests are **AKS-ready**
-* GitOps behavior is **deterministic and auditable**
-* Provides a clean foundation for future scaling
+* This directory reflects **running AKS workloads (stage environment)** and **production-ready manifests**
+* Environment differences are **intentional, documented, and reversible**
+* GitOps behavior is **auditable and deterministic**
+* The design prioritizes **correctness, parity, and cost awareness**
 
 This directory defines the **authoritative Kubernetes deployment model** for the Framely platform.
 
 ---
+
