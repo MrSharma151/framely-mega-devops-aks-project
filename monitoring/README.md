@@ -1,10 +1,14 @@
 
 
+---
+
 ## 📊 Observability
 
 ### Framely – Mega DevOps AKS Project
 
 ---
+
+![Grafana Dashboard](../diagrams/screenshots/framely-sg-grafana-dashboard1.png)
 
 ## 🎯 Purpose of This Directory
 
@@ -12,8 +16,8 @@ This directory documents the **observability strategy** for the Framely platform
 
 It defines how monitoring and visibility are handled across:
 
-* Infrastructure and Kubernetes clusters
-* Application workloads
+* Kubernetes clusters running on AKS
+* Application workloads deployed via GitOps
 
 The observability stack is **intentionally split by responsibility** to align with production-grade, cloud-native practices.
 
@@ -23,7 +27,7 @@ The observability stack is **intentionally split by responsibility** to align wi
 
 Framely follows a **hybrid observability approach**:
 
-* **Azure-native monitoring** for infrastructure and cluster-level signals
+* **Azure-native monitoring** for infrastructure and Kubernetes platform signals
 * **Cloud-native tooling (Prometheus and Grafana)** for application-level metrics
 
 This separation provides:
@@ -31,7 +35,7 @@ This separation provides:
 * Clear ownership boundaries
 * Reduced coupling between cloud provider and application monitoring
 * Easier portability across environments
-* Better control over monitoring costs
+* Controlled monitoring and ingestion costs
 
 ---
 
@@ -39,7 +43,7 @@ This separation provides:
 
 ### Infrastructure and Cluster Observability
 
-Azure Log Analytics is used for **platform-level monitoring**.
+Azure Log Analytics is used for **platform-level monitoring** of AKS.
 
 ### Scope
 
@@ -59,7 +63,7 @@ Azure Log Analytics is used for **platform-level monitoring**.
   * Infrastructure diagnostics
 * **Not used for application-level metrics**
 
-Application metrics are intentionally excluded to avoid vendor lock-in and excessive ingestion costs.
+Application metrics are intentionally excluded to avoid vendor lock-in and unnecessary ingestion costs.
 
 ---
 
@@ -72,38 +76,43 @@ Application metrics are handled using **Prometheus and Grafana**, deployed **ins
 ### Deployment Model
 
 * Installed using **Helm charts**
-* Deployed in a dedicated Kubernetes namespace
-* Treated as **platform components**, not application workloads
+* Deployed as **platform components**
+* Isolated from application workloads
+* Managed independently of application release cycles
 
 ### Responsibilities
 
-* Application metrics collection
-* Service-level monitoring
-* Metrics visualization via dashboards
-* Alerting (when enabled)
+* Application and service-level metrics collection
+* Metrics visualization through Grafana dashboards
+* Operational visibility during development and validation
+* Alerting support (when enabled)
 
 ### Rationale
 
-* Kubernetes-native monitoring stack
+* Kubernetes-native observability stack
 * Industry-standard tooling
 * Cloud-provider independent
-* Consistent behavior across local and AKS environments
+* Consistent behavior across stage and production environments
+
+![Prometheus](../diagrams/screenshots/framely-prometheus-sg.png)
+
+![Grafana Dashboard](../diagrams/screenshots/framely-sg-grafana-dashboard2.png)
 
 ---
 
 ## 📁 Directory Scope
 
-The `monitoring/` directory acts as a **logical boundary** for observability-related concerns.
+The `monitoring/` directory serves as a **logical boundary** for observability concerns.
 
 It contains:
 
-* Documentation of the observability approach
-* References for Prometheus and Grafana usage
+* Documentation of the observability architecture
 * Design decisions related to monitoring
+* References to platform-level monitoring components
 
-At the current stage, this directory contains **documentation only**.
+At this stage, the directory focuses on **documentation and architectural intent**.
 
-Helm charts and configuration values may be added as the platform evolves.
+Platform tooling (Helm values, dashboards, alerts) is managed separately and can be expanded as needed.
 
 ---
 
@@ -111,8 +120,9 @@ Helm charts and configuration values may be added as the platform evolves.
 
 * Infrastructure monitoring is separate from application monitoring
 * Observability tooling is treated as **platform infrastructure**
-* GitOps-compatible and Kubernetes-native
+* Kubernetes-native and GitOps-compatible
 * Cost-aware and production-aligned
+* No application coupling to cloud-provider monitoring APIs
 
 ---
 
@@ -125,16 +135,16 @@ The observability stack can be extended to include:
 * Alertmanager integration
 * External metrics adapters for HPA
 
-These enhancements are optional and environment-dependent.
+These enhancements are optional and can be introduced incrementally without impacting application workloads.
 
 ---
 
 ## 🏁 Summary
 
-* **Azure Log Analytics** is used for infrastructure and AKS monitoring
-* **Prometheus and Grafana** are used for application metrics
-* **Helm-based deployment** enables cluster-native observability
-* Clear separation of concerns ensures a maintainable and scalable design
+* **Azure Log Analytics** provides infrastructure and AKS-level visibility
+* **Prometheus and Grafana** handle application-level metrics
+* **Helm-based deployment** ensures cluster-native observability
+* Clear separation of concerns enables a scalable and maintainable monitoring strategy
 
 This directory documents the **authoritative observability model** for the Framely platform.
 

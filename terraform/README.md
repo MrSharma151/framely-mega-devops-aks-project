@@ -1,5 +1,7 @@
 
 
+---
+
 # 📘 Terraform Infrastructure
 
 ## Framely – Mega DevOps AKS Project
@@ -38,6 +40,8 @@ Terraform is responsible for provisioning and managing:
 * Log Analytics Workspace
 * Managed Identities and role assignments
 
+![rg-framely-stage](../diagrams/screenshots/rg-framely-stage.png)
+
 ---
 
 ### ❌ Out of Scope
@@ -49,7 +53,7 @@ Terraform explicitly does **not**:
 * Install Helm charts
 * Configure or manage ArgoCD
 * Configure Jenkins (handled via Ansible)
-* Execute from Jenkins pipelines during the initial phase
+* Provision Kubernetes `Service`-level resources (e.g., LoadBalancers)
 
 This ensures:
 
@@ -78,11 +82,11 @@ terraform/
 │
 ├── environments/                # Environment-specific composition
 │   ├── stage/
-│   │   ├── backend.tf           # Remote state configuration
+│   │   ├── backend.tf
 │   │   ├── providers.tf
 │   │   ├── variables.tf
 │   │   ├── terraform.tfvars
-│   │   └── main.tf              # Module wiring
+│   │   └── main.tf
 │   │
 │   └── prod/
 │       ├── backend.tf
@@ -112,7 +116,37 @@ Each environment is:
 * Structurally identical
 * Independently manageable
 
-This prevents cross-environment impact and mirrors real production setups.
+---
+
+## 🔁 Environment Provisioning Status (Clarification)
+
+At the current stage of this project, **only the `stage` environment infrastructure is provisioned on Azure**.
+
+The `prod` Terraform configuration is:
+
+* Fully defined
+* Structurally identical to `stage`
+* Intentionally **not applied**
+
+### Rationale
+
+This was a **deliberate, cost-aware decision**:
+
+* `stage` and `prod` environments share the same:
+
+  * Architecture
+  * Terraform modules
+  * AKS configuration
+  * CI/CD and GitOps workflows
+* Provisioning a second AKS cluster would **double cloud cost** without providing additional learning or validation value
+
+For this reason, **all infrastructure validation and platform testing was performed using the `stage` environment only**.
+
+### Important Note
+
+Provisioning production would require **only running `terraform apply`** for the `prod` environment.
+
+No module changes, architectural refactoring, or CI/CD updates would be required.
 
 ---
 
@@ -199,6 +233,24 @@ Node pools are intentionally not over-segmented.
 
 ---
 
+## 🌐 Load Balancer Responsibility (Important Clarification)
+
+Azure Load Balancers are **not provisioned by Terraform** in this project.
+
+They are **automatically created and managed by Azure** when:
+
+* An ingress-nginx `Service` of type `LoadBalancer` is applied
+* The manifest is deployed by **ArgoCD**
+
+Terraform’s responsibility ends at **AKS cluster provisioning**.
+Service-level networking resources are owned by Kubernetes and Azure’s AKS integration.
+
+This aligns with standard AKS operational behavior.
+
+![rg-loadbalancer](../diagrams/screenshots/MC-rg-framely-stage.png)
+
+---
+
 ## 🖥 Jenkins Virtual Machine
 
 ### Purpose
@@ -220,19 +272,7 @@ Jenkins performs:
 * Image pushes to ACR
 * GitOps manifest updates via Git commits
 
-Jenkins does **not**:
-
-* Deploy workloads
-* Execute `kubectl`
-* Interact directly with AKS
-
-### Characteristics
-
-* VM size: Cost-optimized
-* OS: Ubuntu LTS
-* Network: `subnet-jenkins-vm`
-* Public IP: Enabled with restricted NSG
-* Configuration: Managed via **Ansible**
+Jenkins does **not** deploy workloads or interact directly with AKS.
 
 ---
 
@@ -258,8 +298,6 @@ No registry credentials are stored in Terraform.
 
 ## 🔑 Identity and Access Management
 
-### Managed Identity Strategy
-
 * AKS uses system-assigned managed identity
 * Role assignments managed via Terraform:
 
@@ -271,55 +309,14 @@ This avoids secrets and aligns with Azure best practices.
 
 ---
 
-## 🗝 Azure Key Vault
-
-### Purpose
-
-* Centralized infrastructure secret store
-
-### Usage Model
-
-* Key Vault is provisioned via Terraform
-* Secrets may be added post-provisioning
-* Applications consume secrets via Kubernetes Secrets
-
-CSI driver integration is deferred for future enhancement.
-
----
-
-## 🗄 Azure SQL Database
-
-### Design
-
-* Azure SQL Server with a single database
-* Cost-optimized tier
-* Public endpoint with firewall restrictions
-
-Private endpoints are intentionally deferred.
-
----
-
-## 🧺 Azure Storage Account (Blob)
-
-### Purpose
-
-* Application file storage
-* Media uploads and exports
-
-### Access Model
-
-* Connection strings (current)
-* Managed identity (future)
-
----
-
 ## 📊 Observability Integration
 
-### Log Analytics Workspace
+* Log Analytics Workspace provisioned via Terraform
+* Integrated with AKS for:
 
-* Integrated with AKS
-* Cluster and node monitoring
-* Infrastructure diagnostics
+  * Cluster health
+  * Node monitoring
+  * Infrastructure diagnostics
 
 Application metrics are handled separately via Prometheus and Grafana.
 
@@ -338,22 +335,15 @@ Over-engineering is intentionally avoided.
 
 ---
 
-## 🚀 Execution Strategy
-
-1. Provision **Stage** infrastructure
-2. Validate CI → GitOps → ArgoCD → AKS flow
-3. Maintain **Prod** configuration parity
-4. Avoid provisioning Prod to control cost
-
----
-
 ## 🏁 Final Notes
 
-* Infrastructure is fully defined as code
-* Clear separation of concerns is enforced
-* GitOps-native application delivery is preserved
-* Foundations are secure, minimal, and scalable
+* Infrastructure is fully defined as code (**stage applied, prod defined**)
+* Responsibility boundaries are explicit
+* AKS-native behavior is respected
+* GitOps delivery remains clean and deterministic
 
 This directory defines the **authoritative Azure infrastructure model** for the Framely platform.
 
 ---
+
+

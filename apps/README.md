@@ -1,14 +1,15 @@
 
+---
 
 # 🧩 Framely Applications
 
 This directory contains **all application services** for the Framely platform.
-It is the **authoritative source of truth** for:
+It serves as the **authoritative source of truth** for:
 
-* Application responsibilities and boundaries
+* Application responsibilities and service boundaries
 * Docker images and Dockerfiles
 * Runtime configuration contracts
-* Kubernetes (AKS) readiness assumptions
+* Kubernetes (AKS) execution assumptions
 
 The application structure is **finalized and stable**.
 No architectural or structural changes are expected in this directory.
@@ -54,7 +55,9 @@ apps/
 
 * Multi-stage Dockerfile
 * Non-root runtime user
-* Production-ready image
+* Production-grade container image
+
+![Backend App via Swagger docs](../diagrams/screenshots/framely-backend-api-sg.png)
 
 📘 See: `apps/backend/README.md`
 
@@ -77,7 +80,7 @@ apps/
 * Fully stateless
 * Consumes backend APIs only
 * No direct database access
-* CDN and ingress friendly
+* CDN- and ingress-friendly
 
 **Containerization**
 
@@ -85,6 +88,8 @@ apps/
 * Build-time environment variable injection
 * Minimal runtime image
 * Non-root container execution
+
+![Framely Storefront UI](../diagrams/screenshots/framely-sg-ui.png)
 
 📘 See: `apps/frontend-customer/README.md`
 
@@ -115,6 +120,8 @@ apps/
 * Minimal runtime image
 * Non-root container execution
 
+![Framely Admin UI](../diagrams/screenshots/framely-admin-sg-dashboard.png)
+
 📘 See: `apps/frontend-admin/README.md`
 
 ---
@@ -130,7 +137,7 @@ Each application:
 All Dockerfiles are:
 
 * Production-grade
-* Kubernetes (AKS) ready
+* Kubernetes (AKS) compatible
 * Considered **frozen** (no functional changes expected)
 
 ---
@@ -188,7 +195,7 @@ This section defines the **stable runtime configuration contract** for all servi
 
 `apps/docker-compose.yml` is used exclusively for **local development and validation**.
 
-It allows:
+It enables:
 
 * End-to-end service integration testing
 * Validation of environment variable contracts
@@ -196,7 +203,7 @@ It allows:
 
 It is **not used** in Kubernetes or production environments.
 
-Services included:
+Included services:
 
 * SQL Server (local only)
 * Backend API
@@ -213,23 +220,23 @@ Services included:
 4. Environment variables define the runtime contract
 5. The **same image runs across all environments**
 
-These constraints are already enforced in the codebase.
+These constraints are enforced in the codebase and CI pipeline.
 
 ---
 
 ## 🧪 Testing Expectations
 
-* Backend:
+* **Backend**
 
   * Unit tests
   * Integration tests
-* Frontend:
+* **Frontend**
 
   * Jest-based unit and component tests
-* CI:
+* **CI**
 
   * Tests executed before image build
-* CD:
+* **CD**
 
   * Only validated images are promoted
 
@@ -239,7 +246,7 @@ These constraints are already enforced in the codebase.
 
 * The `apps/` directory is **finalized**
 * Represents a **production-grade application layer**
-* Safe to use as long-term technical documentation
+* Safe to treat as long-term technical documentation
 * No re-architecture or refactor is expected
 
 ---

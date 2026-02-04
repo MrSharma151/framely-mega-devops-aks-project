@@ -1,4 +1,5 @@
 
+---
 
 # 📘 Jenkins CI Configuration
 
@@ -6,15 +7,19 @@
 
 ---
 
+![Jenkins](../diagrams/screenshots/Jenkins-multibranch-pipeline.png)
+
+
 ## 🎯 Purpose of Jenkins in Framely
 
 In the Framely platform, Jenkins is used **exclusively for Continuous Integration (CI) and GitOps orchestration**, with **built-in DevSecOps enforcement**.
 
-Jenkins is responsible for **building, validating, and promoting artifacts**, not for deploying workloads.
+Jenkins is responsible for **building, validating, scanning, and promoting artifacts**.
+It does **not** deploy workloads.
 
-> Jenkins updates Git.
+> Jenkins builds and updates Git.
 > ArgoCD deploys declared state from Git.
-> Kubernetes executes what ArgoCD applies.
+> Kubernetes executes only what ArgoCD applies.
 
 ---
 
@@ -27,7 +32,7 @@ Jenkins performs the following functions:
 * Executes unit and integration tests
 * Runs dependency and container security scans
 * Builds Docker images
-* Pushes images to a container registry
+* Pushes images to container registries
 * Updates Kubernetes manifests **via GitOps commits**
 
 ---
@@ -41,7 +46,7 @@ Jenkins explicitly does **not**:
 * Modify cluster state
 * Trigger or control ArgoCD synchronization
 
-Deployment responsibility belongs **only** to ArgoCD.
+Deployment responsibility belongs **exclusively** to ArgoCD.
 
 ---
 
@@ -64,13 +69,13 @@ jenkins/
 │
 └── shared/                  # Reusable pipeline building blocks
     ├── tests.groovy         # Test execution logic
-    ├── security.groovy      # Dependency and code scanning
+    ├── security.groovy      # Dependency scanning
     ├── docker.groovy        # Docker build and push
     ├── trivy.groovy         # Container vulnerability scanning
     └── gitops.groovy        # GitOps image update logic
 ```
 
-Only actively used shared components are retained to keep the CI system **explicit and auditable**.
+Only actively used shared components are retained to keep the CI system **explicit, minimal, and auditable**.
 
 ---
 
@@ -81,7 +86,7 @@ The `Jenkinsfile` located at the repository root is the **single pipeline entry 
 ### Responsibilities
 
 * Detect branch context (multibranch pipeline)
-* Prevent GitOps-triggered CI loops (`[skip ci]`)
+* Prevent GitOps-triggered CI loops using `[skip ci]`
 * Load declarative configuration:
 
   * `apps.yaml`
@@ -95,7 +100,7 @@ The `Jenkinsfile` located at the repository root is the **single pipeline entry 
 
 | Branch  | Pipeline          | Purpose                            |
 | ------- | ----------------- | ---------------------------------- |
-| `main`  | `ci-main.groovy`  | Validation and feedback            |
+| `main`  | `ci-main.groovy`  | Validation and developer feedback  |
 | `stage` | `ci-stage.groovy` | Automated pre-production promotion |
 | `prod`  | `ci-prod.groovy`  | Controlled production release      |
 
@@ -107,7 +112,8 @@ This Jenkins setup follows a **progressive DevSecOps model**:
 
 * Security is enforced incrementally
 * Enforcement strength increases per environment
-* CI remains deterministic and repeatable
+* Pipelines remain deterministic and repeatable
+* CI logic is environment-agnostic
 
 ---
 
@@ -130,6 +136,9 @@ This Jenkins setup follows a **progressive DevSecOps model**:
 * No GitOps updates
 * Pipeline never fails on vulnerabilities
 
+![ci-main](../diagrams/screenshots/jenkins-main-branch.png)
+
+
 ---
 
 ### `ci-stage` — Pre-Production Promotion
@@ -148,7 +157,10 @@ This Jenkins setup follows a **progressive DevSecOps model**:
 
 * CRITICAL and HIGH vulnerabilities are reported
 * Pipeline does not fail
-* ArgoCD auto-syncs stage environment
+* ArgoCD auto-syncs the stage environment
+
+![ci-stage](../diagrams/screenshots/jenkins-stage-branch.png)
+
 
 ---
 
@@ -170,6 +182,9 @@ This Jenkins setup follows a **progressive DevSecOps model**:
 * Pipeline fails on **CRITICAL vulnerabilities**
 * HIGH vulnerabilities remain visible
 * ArgoCD synchronization is manual
+
+![ci-prod](../diagrams/screenshots/jenkins-prod-branch.png)
+
 
 ---
 
@@ -194,13 +209,13 @@ Trivy is used for container image vulnerability scanning.
 | `prod`      | Strict enforcement  | CRITICAL only    |
 
 Jenkins **reports and enforces security**.
-It does not remediate vulnerabilities.
+It does not attempt vulnerability remediation.
 
 ---
 
 ## 🌐 Frontend Build-Time Configuration
 
-Both frontend applications are **Next.js** based.
+Both frontend applications are **Next.js–based**.
 
 ### Key Constraint
 
@@ -235,7 +250,7 @@ buildArgs:
 ## 🐳 Docker Image Metadata Contract
 
 ```text
-Image: docker.io/mrsharma151/framely-backend
+Image: <registry>/framely-backend
 Tag:   <version>-<git-sha>
 ```
 
@@ -265,9 +280,9 @@ Rules:
 
 ## 🧰 Required Global Tooling
 
-Jenkins runs as system user `jenkins`.
+Jenkins runs as the system user `jenkins`.
 
-All tools must be available globally.
+All tools must be available **system-wide**.
 
 | Tool               | Purpose                     |
 | ------------------ | --------------------------- |
@@ -285,12 +300,11 @@ All tools must be available globally.
 | Credential        | Purpose                              |
 | ----------------- | ------------------------------------ |
 | `github-pat`      | Repository access and GitOps commits |
-| `dockerhub-creds` | Image registry access                |
-| `acr-*`           | Reserved for AKS migration           |
+| `acr-credentials` | Azure Container Registry access      |
 
 ---
 
-## ☁️ Local and AKS Compatibility
+## ☁️ Environment Compatibility
 
 | Aspect          | Local      | AKS       |
 | --------------- | ---------- | --------- |
@@ -300,7 +314,14 @@ All tools must be available globally.
 | Pipelines       | Same       | Same      |
 | GitOps flow     | Same       | Same      |
 
-Infrastructure changes do not affect CI/CD logic.
+Infrastructure changes do not impact CI logic.
+
+---
+
+## Email Notification on each events of pipelines:
+
+![Email Notification](../diagrams/screenshots/jenkins-email-notification.png)
+
 
 ---
 
@@ -318,7 +339,7 @@ Infrastructure changes do not affect CI/CD logic.
 * Jenkins configuration is **environment-agnostic**
 * Pipelines are **config-driven**
 * Security enforcement is **progressive and deterministic**
-* Fully compatible with AKS-based delivery
+* Actively used in an **AKS-based delivery pipeline**
 
 This module defines the **authoritative CI behavior** for the Framely platform.
 

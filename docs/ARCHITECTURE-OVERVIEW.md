@@ -1,4 +1,5 @@
 
+---
 
 # 📘 Architecture Overview
 
@@ -12,26 +13,28 @@ This document provides a **high-level architectural overview** of the Framely pl
 
 It explains:
 
-* System components and their responsibilities
+* Core system components and their responsibilities
 * Interaction between CI, CD, GitOps, and infrastructure layers
-* Environment separation and deployment flow
+* Environment separation and promotion model
 * Design decisions that shape the platform
 
 This document is **descriptive, not procedural**.
-Detailed configuration and implementation are documented in module-specific READMEs.
+Detailed implementation details are documented in module-level READMEs.
+
+![Architecture Overview](../diagrams/architecture/framely-architecture.jpg)
 
 ---
 
 ## 🧱 Architecture Summary
 
-Framely follows a **layered, GitOps-driven architecture** designed for:
+Framely follows a **layered, GitOps-driven architecture** designed to provide:
 
 * Clear separation of concerns
-* Predictable deployments
-* Environment parity
+* Deterministic and auditable deployments
+* Environment isolation
 * Cloud portability
 
-At a high level, the platform consists of:
+At a high level, the platform consists of the following layers:
 
 1. Application Layer
 2. CI Layer
@@ -59,13 +62,13 @@ The application layer contains all business services:
 * Stateless services
 * Configuration via environment variables only
 * Single immutable container image per service
-* Same image used across all environments
+* Same image promoted across all environments
 
 Applications do **not** contain:
 
 * Environment-specific logic
 * Infrastructure assumptions
-* Deployment logic
+* Deployment or orchestration logic
 
 ---
 
@@ -74,23 +77,23 @@ Applications do **not** contain:
 **Tool:** Jenkins
 **Location:** `jenkins/`
 
-The CI layer is responsible for **building and validating artifacts**.
+The CI layer is responsible for **building, validating, and promoting artifacts via GitOps**.
 
 ### Responsibilities
 
-* Execute tests
-* Run security scans
+* Execute unit and integration tests
+* Perform security and vulnerability scanning
 * Build container images
-* Push images to registry
+* Push images to the container registry
 * Update GitOps manifests (image tags only)
 
 ### Explicit Non-Responsibilities
 
 * No Kubernetes access
-* No deployments
+* No workload deployment
 * No runtime environment control
 
-CI output is always a **Git commit**, never a cluster mutation.
+CI output is always a **Git commit**, never a direct cluster mutation.
 
 ---
 
@@ -99,40 +102,40 @@ CI output is always a **Git commit**, never a cluster mutation.
 **Tool:** ArgoCD
 **Location:** `argocd/`
 
-The CD layer applies **Git-declared desired state** to Kubernetes clusters.
+The GitOps and CD layer is responsible for **reconciling Git-declared state** into Kubernetes clusters.
 
 ### Responsibilities
 
-* Watch Git repositories
+* Monitor Git repositories for changes
 * Reconcile Kubernetes manifests
 * Enforce environment boundaries
-* Apply promotion rules
+* Apply promotion and synchronization rules
 
 ### Environment Behavior
 
-* Stage: automatic synchronization
-* Production: manual synchronization
+* **Stage:** Automatic synchronization
+* **Production:** Manual synchronization
 
-ArgoCD is the **only component** allowed to deploy workloads.
+ArgoCD is the **only component** permitted to deploy workloads.
 
 ---
 
 ## ☸️ Kubernetes Runtime Layer
 
-**Tool:** Kubernetes (KIND locally, AKS in cloud)
+**Tool:** Kubernetes (AKS)
 **Location:** `kubernetes/`
 
-This layer defines **how workloads run**.
+This layer defines **how workloads run inside the cluster**.
 
 ### Characteristics
 
 * Kustomize-based application manifests
 * Environment-aligned structure (`stage/`, `prod/`)
-* Strong environment parity
 * Stateless workloads
 * Secure-by-default pod configuration
+* No imperative or manual deployments
 
-No imperative deployments are allowed at this layer.
+Kubernetes executes **only** the state reconciled by ArgoCD.
 
 ---
 
@@ -141,17 +144,17 @@ No imperative deployments are allowed at this layer.
 **Tool:** Terraform
 **Location:** `terraform/`
 
-Terraform provisions all **cloud infrastructure** required to run the platform.
+Terraform provisions all **cloud infrastructure** required to support the platform.
 
 ### Responsibilities
 
 * Azure networking
-* AKS clusters
-* Jenkins VM
-* Container registry
+* AKS clusters and node pools
+* Jenkins virtual machine
+* Container registry (ACR)
 * Databases and storage
 * Identity and access management
-* Observability infrastructure
+* Infrastructure-level observability
 
 Infrastructure lifecycle is **fully decoupled** from application delivery.
 
@@ -162,15 +165,15 @@ Infrastructure lifecycle is **fully decoupled** from application delivery.
 **Tool:** Ansible
 **Location:** `ansible/`
 
-Ansible configures the **Jenkins VM** after provisioning.
+Ansible is used to configure the **Jenkins VM** after provisioning.
 
 ### Responsibilities
 
-* Install CI tooling
-* Ensure environment parity with local setup
-* Enforce Jenkins system-user constraints
+* Install and configure CI tooling
+* Enforce system-level dependencies
+* Ensure Jenkins runs with correct permissions and constraints
 
-Ansible does not provision infrastructure or manage applications.
+Ansible does not provision infrastructure or manage application workloads.
 
 ---
 
@@ -178,45 +181,45 @@ Ansible does not provision infrastructure or manage applications.
 
 **Location:** `monitoring/`
 
-Observability is intentionally split:
+Observability is intentionally split by responsibility:
 
 ### Infrastructure Monitoring
 
 * Azure Log Analytics
-* AKS and node-level visibility
+* AKS control plane and node-level metrics
 
 ### Application Monitoring
 
 * Prometheus
 * Grafana
-* Deployed via Helm as platform components
+* Deployed as platform components via Helm
 
-This separation ensures portability and cost control.
+This separation ensures portability, scalability, and cost control.
 
 ---
 
 ## 🌍 Environment Model
 
-Framely uses **environment-aligned branches and clusters**:
+Framely uses **environment-aligned Git branches and AKS clusters**:
 
-| Environment | Git Branch       | Kubernetes Cluster |
-| ----------- | ---------------- | ------------------ |
-| Local       | `main` / `stage` | KIND               |
-| Stage       | `stage`          | AKS (Stage)        |
-| Production  | `prod`           | AKS (Prod)         |
+| Environment | Git Branch | Kubernetes Cluster |
+| ----------- | ---------- | ------------------ |
+| Local       | `main`     | KIND               |
+| Stage       | `stage`    | AKS (Stage)        |
+| Production  | `prod`     | AKS (Prod)         |
 
-Environment promotion occurs **via Git commits**, not commands.
+Environment promotion occurs **through Git commits**, not runtime commands.
 
 ---
 
 ## 🔐 Security Model (High-Level)
 
-Security is enforced at multiple layers:
+Security is enforced across multiple layers:
 
-* CI: tests and vulnerability scanning
-* GitOps: reviewed state only
-* Kubernetes: restricted pod security
-* Infrastructure: managed identities and minimal access
+* **CI:** Tests and vulnerability scanning
+* **GitOps:** Reviewed and approved state only
+* **Kubernetes:** Restricted pod security and isolation
+* **Infrastructure:** Managed identities and least-privilege access
 
 Security enforcement increases progressively from `main` → `stage` → `prod`.
 
@@ -225,13 +228,13 @@ Security enforcement increases progressively from `main` → `stage` → `prod`.
 ## 🔁 End-to-End Flow (Conceptual)
 
 1. Code changes are merged into `main`
-2. CI validates design and correctness
-3. Promotion to `stage` triggers CI + GitOps update
-4. ArgoCD deploys to Stage cluster automatically
-5. Promotion to `prod` requires approval
+2. CI validates correctness and security
+3. Promotion to `stage` triggers CI and GitOps updates
+4. ArgoCD automatically deploys to the Stage cluster
+5. Promotion to `prod` requires explicit approval
 6. ArgoCD deploys to Production manually
 
-All state transitions are **auditable via Git**.
+All state transitions are **fully auditable via Git history**.
 
 ---
 
@@ -239,8 +242,8 @@ All state transitions are **auditable via Git**.
 
 The architecture prioritizes:
 
-* Simplicity over cleverness
-* Deterministic behavior
+* Simplicity over clever abstractions
+* Deterministic and repeatable behavior
 * Strong separation of concerns
 * Git as the control plane
 * Cloud portability
@@ -252,12 +255,11 @@ Over-engineering is intentionally avoided.
 ## 🏁 Final Notes
 
 * This architecture is **stable and finalized**
-* Designed for GitOps-based Kubernetes platforms
-* Compatible with local and cloud environments
-* Scales from single-developer to team usage
+* Designed for GitOps-driven Kubernetes platforms
+* Proven across local, stage, and production environments
+* Scales cleanly from individual development to team usage
 
 This document represents the **authoritative architectural view** of the Framely platform.
 
 ---
-
 
